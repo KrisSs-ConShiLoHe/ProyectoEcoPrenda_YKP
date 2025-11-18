@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi Impacto Ambiental - EcoPrenda{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+
+    <!-- Encabezado -->
+    <div class="text-center mb-5">
+        <h1 class="fw-bold text-success">🌱 Mi Impacto Ambiental</h1>
+        <p class="text-muted">Conoce el impacto positivo que has generado al donar, intercambiar o vender prendas.</p>
+    </div>
+
+    <!-- Resumen del impacto -->
+    <div class="row text-center mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body">
+                    <h5 class="text-secondary">Carbono evitado</h5>
+                    <h2 class="text-success fw-bold">
+                        {{ mi_impacto.total_carbono|floatformat:2 }} kg CO₂
+                    </h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body">
+                    <h5 class="text-secondary">Energía ahorrada</h5>
+                    <h2 class="text-success fw-bold">
+                        {{ mi_impacto.total_energia|floatformat:2 }} kWh
+                    </h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body">
+                    <h5 class="text-secondary">Total de transacciones</h5>
+                    <h2 class="text-primary fw-bold">{{ total_transacciones }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Desglose por tipo -->
+    <div class="row text-center mb-5">
+        <div class="col-md-4 mb-3">
+            <div class="card border-success shadow-sm rounded-4">
+                <div class="card-body">
+                    <h6 class="text-success fw-bold">Donaciones</h6>
+                    <h3>{{ donaciones }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-info shadow-sm rounded-4">
+                <div class="card-body">
+                    <h6 class="text-info fw-bold">Intercambios</h6>
+                    <h3>{{ intercambios }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-warning shadow-sm rounded-4">
+                <div class="card-body">
+                    <h6 class="text-warning fw-bold">Ventas</h6>
+                    <h3>{{ ventas }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transacciones recientes -->
+    <h4 class="fw-bold mb-3 text-secondary">📋 Transacciones recientes</h4>
+    {% if transacciones_recientes %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle shadow-sm">
+                <thead class="table-success">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Prenda</th>
+                        <th>Origen</th>
+                        <th>Destino</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transacciones_recientes %}
+                    <tr>
+                        <td>{{ t.fecha_transaccion|date:"d/m/Y" }}</td>
+                        <td>{{ t.id_tipo.nombre_tipo }}</td>
+                        <td>{{ t.id_prenda.nombre }}</td>
+                        <td>{{ t.id_usuario_origen.nombre }}</td>
+                        <td>
+                            {% if t.id_usuario_destino %}
+                                {{ t.id_usuario_destino.nombre }}
+                            {% elif t.id_fundacion %}
+                                {{ t.id_fundacion.nombre }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">Aún no tienes transacciones registradas.</p>
+    {% endif %}
+
+</div>
+{% endblock %}

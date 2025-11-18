@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Conversación con {{ otro_usuario.nombre }} - EcoPrenda{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <!-- ADVERTENCIA SOBRE PAGOS Y SEGURIDAD -->
+                <div class="alert alert-warning alert-dismissible fade show mb-3" role="alert">
+                    <h6 class="alert-heading"><i class="bi bi-shield-exclamation"></i> ⚠️ Advertencia de Seguridad</h6>
+                    <p class="mb-2">
+                        <strong>Esta plataforma NO gestiona pagos.</strong> Si realizas transferencias de dinero fuera del sistema a través de apps como Paypal, Mercado Pago, transferencia bancaria o similares, <strong>asumes completamente el riesgo</strong> de:
+                    </p>
+                    <ul class="mb-2">
+                        <li>Fraudes o engaños del otro usuario</li>
+                        <li>No recibir la prenda después de pagar</li>
+                        <li>Problemas con comprobantes de pago</li>
+                        <li>Conflictos sin resolución garantizada</li>
+                    </ul>
+                    <p class="mb-0">
+                        <strong>Recomendaciones:</strong>
+                    </p>
+                    <ul class="mb-0">
+                        <li>Verifica la reputación/calificación del otro usuario</li>
+                        <li>Acuerda los términos con claridad (precio, forma de entrega, cambios, etc.)</li>
+                        <li>Realiza la transacción en un lugar público si es intercambio en persona</li>
+                        <li>Si tienes dudas, reporta el problema usando el botón "Reportar Problema" en tu transacción</li>
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-person-circle"></i> {{ otro_usuario.nombre }}</h5>
+                        <small>{{ otro_usuario.correo }}</small>
+                    </div>
+                    <div class="card-body" style="height: 400px; overflow-y: auto;">
+                        {% if mensajes %}
+                            {% for msg in mensajes %}
+                            <div class="mb-3 {% if msg.id_emisor.id_usuario == usuario.id_usuario %}text-end{% endif %}">
+                                <div class="badge {% if msg.id_emisor.id_usuario == usuario.id_usuario %}bg-primary{% else %}bg-secondary{% endif %} p-2">
+                                    <strong>{{ msg.id_emisor.nombre }}:</strong> {{ msg.contenido }}
+                                    <br><small>{{ msg.fecha_envio|date:"H:i" }}</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <p class="text-muted text-center">No hay mensajes aún. ¡Inicia la conversación!</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <form method="post" action="{% url 'enviar_mensaje' %}" class="input-group">
+                            {% csrf_token %}
+                            <input type="hidden" name="receptor_id" value="{{ otro_usuario.id_usuario }}">
+                            <textarea class="form-control" name="contenido" placeholder="Escribe tu mensaje..." rows="2" required></textarea>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Enviar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

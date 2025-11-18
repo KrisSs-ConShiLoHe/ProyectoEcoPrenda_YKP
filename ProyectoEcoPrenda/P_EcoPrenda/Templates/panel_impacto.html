@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Impacto Ambiental - EcoPrenda{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/panel_impacto.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-impacto text-white py-5">
+    <div class="container text-center">
+        <h1 class="display-4 mb-3">
+            <i class="bi bi-globe2"></i> Impacto Ambiental Colectivo
+        </h1>
+        <p class="lead">Juntos estamos haciendo la diferencia para un planeta más sostenible</p>
+    </div>
+</section>
+
+<!-- Estadísticas Principales -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 shadow h-100 stat-card">
+                    <div class="card-body">
+                        <i class="bi bi-cloud display-1 text-info mb-3"></i>
+                        <h2 class="display-5 fw-bold">{{ impacto_total.total_carbono|default:"0"|floatformat:1 }}</h2>
+                        <p class="text-muted mb-0">kg de CO₂ evitados</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 shadow h-100 stat-card">
+                    <div class="card-body">
+                        <i class="bi bi-lightning-fill display-1 text-warning mb-3"></i>
+                        <h2 class="display-5 fw-bold">{{ impacto_total.total_energia|default:"0"|floatformat:1 }}</h2>
+                        <p class="text-muted mb-0">kWh de energía ahorrada</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 shadow h-100 stat-card">
+                    <div class="card-body">
+                        <i class="bi bi-arrow-repeat display-1 text-success mb-3"></i>
+                        <h2 class="display-5 fw-bold">{{ total_transacciones }}</h2>
+                        <p class="text-muted mb-0">Transacciones realizadas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 shadow h-100 stat-card">
+                    <div class="card-body">
+                        <i class="bi bi-heart-fill display-1 text-danger mb-3"></i>
+                        <h2 class="display-5 fw-bold">{{ total_donaciones }}</h2>
+                        <p class="text-muted mb-0">Prendas donadas</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Desglose de Transacciones -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5">Desglose de Actividad</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card text-center h-100 feature-card">
+                    <div class="card-body">
+                        <i class="bi bi-arrow-left-right display-3 text-primary mb-3"></i>
+                        <h3>{{ total_intercambios }}</h3>
+                        <p class="text-muted">Intercambios</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card text-center h-100 feature-card">
+                    <div class="card-body">
+                        <i class="bi bi-cart-check display-3 text-success mb-3"></i>
+                        <h3>{{ total_ventas }}</h3>
+                        <p class="text-muted">Ventas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card text-center h-100 feature-card">
+                    <div class="card-body">
+                        <i class="bi bi-heart-fill display-3 text-danger mb-3"></i>
+                        <h3>{{ total_donaciones }}</h3>
+                        <p class="text-muted">Donaciones</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Fundaciones con Más Donaciones -->
+<section class="py-5 bg-soft">
+    <div class="container">
+        <h2 class="mb-4"><i class="bi bi-heart"></i> Fundaciones Destacadas</h2>
+        <div class="row">
+            {% if fundaciones_top %}
+                {% for fundacion in fundaciones_top %}
+                <div class="col-md-4 mb-3">
+                    <div class="card fundacion-card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ fundacion.nombre }}</h5>
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-box-seam"></i> {{ fundacion.num_donaciones }} donaciones recibidas
+                            </p>
+                            <a href="{% url 'detalle_fundacion' fundacion.id_fundacion %}" class="btn btn-outline-primary btn-sm">
+                                Ver más
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12 text-center">
+                    <p class="text-muted">Aún no hay donaciones registradas</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- Usuarios Más Activos -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="mb-4"><i class="bi bi-trophy"></i> Usuarios Más Activos</h2>
+        <div class="row">
+            {% for usuario_act in usuarios_activos %}
+            <div class="col-md-4 mb-3">
+                <div class="card user-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <span class="badge rank-badge">
+                                    {{ forloop.counter }}
+                                </span>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="mb-0">{{ usuario_act.nombre }}</h5>
+                                <small class="text-muted">{{ usuario_act.num_transacciones }} transacciones</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="cta-impacto text-white py-5">
+    <div class="container text-center">
+        <h2 class="mb-3">¿Quieres contribuir?</h2>
+        <p class="lead mb-4">Cada prenda cuenta. Únete a nuestra comunidad sostenible.</p>
+        {% if usuario %}
+            <a href="{% url 'crear_prenda' %}" class="btn btn-light btn-lg">
+                <i class="bi bi-plus-circle"></i> Publicar Prenda
+            </a>
+        {% else %}
+            <a href="{% url 'registro' %}" class="btn btn-light btn-lg">
+                <i class="bi bi-person-plus"></i> Registrarse
+            </a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

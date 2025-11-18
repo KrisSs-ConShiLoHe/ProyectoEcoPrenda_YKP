@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestionar Donaciones - {{ fundacion.nombre }} - EcoPrenda{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+    <h2 class="mb-4 text-center">
+        <i class="bi bi-box-seam"></i> Gestión de Donaciones Pendientes
+    </h2>
+    <div class="card">
+        <div class="card-header">
+            <i class="bi bi-gift"></i> Donaciones Pendientes
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead class="table-info">
+                        <tr>
+                            <th>ID</th>
+                            <th>Prenda</th>
+                            <th>Donante</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for donacion in donaciones %}
+                            <tr>
+                                <td>{{ donacion.id_transaccion }}</td>
+                                <td>{{ donacion.id_prenda.nombre }}</td>
+                                <td>{{ donacion.id_usuario_origen.nombre }}</td>
+                                <td>{{ donacion.fecha_transaccion|date:"d/m/Y" }}</td>
+                                <td>
+                                    <a href="{% url 'confirmar_recepcion_donacion' donacion.id_transaccion %}"
+                                       class="btn btn-success btn-sm mb-1">
+                                        <i class="bi bi-check-circle"></i> Confirmar
+                                    </a>
+                                    <a href="{% url 'enviar_mensaje_agradecimiento' donacion.id_usuario_origen.id_usuario %}"
+                                       class="btn btn-primary btn-sm mb-1">
+                                        <i class="bi bi-envelope-heart"></i> Agradecer
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No hay donaciones pendientes.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4 text-center">
+        <a href="{% url 'panel_fundacion' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver al Panel de Fundación
+        </a>
+    </div>
+</div>
+{% endblock %}

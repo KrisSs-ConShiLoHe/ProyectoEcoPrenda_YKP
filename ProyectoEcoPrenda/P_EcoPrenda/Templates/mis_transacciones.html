@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Transacciones - EcoPrenda{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <h2 class="mb-4"><i class="bi bi-arrow-repeat"></i> Mis Transacciones</h2>
+
+        <!-- Tabs para Enviadas/Recibidas -->
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <a class="nav-link active" id="tab-enviadas" data-bs-toggle="tab" href="#enviadas">Enviadas</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="tab-recibidas" data-bs-toggle="tab" href="#recibidas">Recibidas</a>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- Transacciones Enviadas -->
+            <div class="tab-pane fade show active" id="enviadas" role="tabpanel">
+                {% if transacciones_enviadas %}
+                <div class="row">
+                    {% for trans in transacciones_enviadas %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            {% if trans.id_prenda.imagen_prenda %}
+                            <img src="{{ trans.id_prenda.imagen_prenda.url }}" class="card-img-top" alt="Imagen de {{ trans.id_prenda.nombre }}" style="height: 200px; object-fit: cover;">
+                            {% else %}
+                            <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted" style="height: 200px;">
+                                <span>Sin imagen</span>
+                            </div>
+                            {% endif %}
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="badge bg-primary">{{ trans.id_tipo.nombre_tipo }}</span>
+                                    <span class="badge {% if trans.estado == 'COMPLETADA' %}bg-success{% elif trans.estado == 'PENDIENTE' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                        {{ trans.get_estado_display }}
+                                    </span>
+                                </div>
+
+                                <h5 class="card-title">{{ trans.id_prenda.nombre }}</h5>
+                                
+                                {% if trans.id_usuario_destino %}
+                                <p class="mb-1">
+                                    <strong>Para:</strong> {{ trans.id_usuario_destino.nombre }}
+                                </p>
+                                {% endif %}
+
+                                {% if trans.id_fundacion %}
+                                <p class="mb-1">
+                                    <strong>Fundación:</strong> {{ trans.id_fundacion.nombre }}
+                                </p>
+                                {% endif %}
+
+                                <p class="text-muted small mb-3">
+                                    <i class="bi bi-calendar"></i> {{ trans.fecha_transaccion|date:"d/m/Y H:i" }}
+                                </p>
+
+                                <a href="{% url 'detalle_prenda' trans.id_prenda.id_prenda %}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    Ver Prenda
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No tienes transacciones enviadas.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Transacciones Recibidas -->
+            <div class="tab-pane fade" id="recibidas" role="tabpanel">
+                {% if transacciones_recibidas %}
+                <div class="row">
+                    {% for trans in transacciones_recibidas %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            {% if trans.id_prenda.imagen_prenda %}
+                            <img src="{{ trans.id_prenda.imagen_prenda.url }}" class="card-img-top" alt="Imagen de {{ trans.id_prenda.nombre }}" style="height: 200px; object-fit: cover;">
+                            {% else %}
+                            <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted" style="height: 200px;">
+                                <span>Sin imagen</span> 
+                            </div>
+                            {% endif %}
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="badge bg-success">{{ trans.id_tipo.nombre_tipo }}</span>
+                                    <span class="badge {% if trans.estado == 'COMPLETADA' %}bg-success{% elif trans.estado == 'PENDIENTE' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                        {{ trans.get_estado_display }}
+                                    </span>
+                                </div>
+
+                                <h5 class="card-title">{{ trans.id_prenda.nombre }}</h5>
+                                
+                                <p class="mb-1">
+                                    <strong>De:</strong> {{ trans.id_usuario_origen.nombre }}
+                                </p>
+
+                                <p class="text-muted small mb-3">
+                                    <i class="bi bi-calendar"></i> {{ trans.fecha_transaccion|date:"d/m/Y H:i" }}
+                                </p>
+
+                                <div class="btn-group w-100">
+                                    <a href="{% url 'detalle_prenda' trans.id_prenda.id_prenda %}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        Ver Prenda
+                                    </a>
+                                    
+                                    {% if trans.estado == 'PENDIENTE' %}
+                                    <form method="post" action="{% url 'actualizar_estado_transaccion' trans.id_transaccion %}" 
+                                          class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="estado" value="ACEPTADA">
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="bi bi-check"></i> Aceptar
+                                        </button>
+                                    </form>
+                                    
+                                    <form method="post" action="{% url 'actualizar_estado_transaccion' trans.id_transaccion %}" 
+                                          class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="estado" value="RECHAZADA">
+                                        <button type="submit" class="btn btn-danger btn-sm">
+                                            <i class="bi bi-x"></i> Rechazar
+                                        </button>
+                                    </form>
+                                    {% elif trans.estado == 'EN_PROCESO' %}
+                                    <a href="{% url 'confirmar_recepcion' trans.id_transaccion %}" class="btn btn-success btn-sm">
+                                        <i class="bi bi-check-circle"></i> Confirmar Recepción
+                                    </a>
+                                    <a href="{% url 'reportar_disputa' trans.id_transaccion %}" class="btn btn-warning btn-sm">
+                                        <i class="bi bi-exclamation-triangle"></i> Reportar Problema
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No tienes transacciones recibidas.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

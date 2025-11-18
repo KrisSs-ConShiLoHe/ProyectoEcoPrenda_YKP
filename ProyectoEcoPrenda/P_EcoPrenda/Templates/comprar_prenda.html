@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Comprar Prenda - EcoPrenda{% endblock %}
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h2 class="mb-4"><i class="bi bi-cart-check text-success"></i> Comprar Prenda</h2>
+                        <div class="card mb-4 bg-light">
+                            <!-- Imagen de la prenda -->
+                                <div class="mb-3">
+                                    {% if prenda.imagen_prenda %}
+                                        <img src="{{ prenda.imagen_prenda.url }}" alt="Imagen de {{ prenda.nombre }}" class="img-fluid rounded border w-100" style="max-height: 350px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="d-flex align-items-center justify-content-center bg-white border rounded" style="height: 250px;">
+                                            <span class="text-muted">Sin imagen</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            <div class="card-body">
+                                <h5>{{ prenda.nombre }}</h5>
+                                <p class="text-muted">{{ prenda.descripcion }}</p>
+                                <hr>
+                                <div class="row">
+                                    <div class="col-md-6"><strong>Categoría:</strong> {{ prenda.categoria }}</div>
+                                    <div class="col-md-6"><strong>Talla:</strong> {{ prenda.talla }}</div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6"><strong>Estado:</strong> {{ prenda.estado }}</div>
+                                    <div class="col-md-6"><strong>Vendedor:</strong> {{ prenda.id_usuario.nombre }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> <strong>Próximos pasos:</strong>
+                            <ol class="mb-0">
+                                <li>Enviaremos tu solicitud de compra al vendedor</li>
+                                <li>El vendedor deberá aceptar la transacción</li>
+                                <li>Coordinarán los detalles de pago y entrega</li>
+                            </ol>
+                        </div>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-check-circle"></i> Confirmar Compra</button>
+                                <a href="{% url 'detalle_prenda' prenda.id_prenda %}" class="btn btn-outline-secondary">Cancelar</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

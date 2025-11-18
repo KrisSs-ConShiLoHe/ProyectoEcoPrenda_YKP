@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Recomendaciones - EcoPrenda{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4 text-center">
+        <i class="bi bi-star"></i> Recomendaciones para Ti
+    </h2>
+
+    {% if recomendaciones %}
+    <div class="row">
+        {% for prenda in prendas_recomendadas %}
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="card h-100 shadow-sm">
+                {% if prenda.imagen_prenda %}
+                <img src="{{ prenda.imagen_prenda.url }}" class="card-img-top" alt="Imagen de {{ prenda.nombre }}" style="height: 200px; object-fit: cover;">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted" style="height: 200px;">
+                    <span>Sin imagen</span>
+                </div>
+                {% endif %}
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ prenda.nombre }}</h5>
+                    <p class="card-text mb-1">
+                        <strong>Categoría:</strong> {{ prenda.categoria|default:"N/A" }}
+                    </p>
+                    <p class="card-text mb-1">
+                        <strong>Talla:</strong> {{ prenda.talla|default:"N/A" }}
+                    </p>
+                    <div class="mt-auto d-grid gap-2">
+                        <a href="{% url 'detalle_prenda' prenda.id_prenda %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i> Ver detalles
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center">
+        No hay recomendaciones disponibles en este momento.<br>
+        Explora o utiliza más la plataforma para personalizar tus sugerencias.
+    </div>
+    {% endif %}
+
+    <div class="text-center mt-4">
+        <a href="{% url 'lista_prendas' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a Prendas
+        </a>
+    </div>
+</div>
+{% endblock %}

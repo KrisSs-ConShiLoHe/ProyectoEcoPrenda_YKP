@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Proponer Intercambio - EcoPrenda{% endblock %}
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h2 class="mb-4"><i class="bi bi-arrow-left-right text-primary"></i> Proponer Intercambio</h2>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="card mb-3 bg-light">
+                                <div class="card-body">
+                                    <h6>Prenda que deseas:</h6>
+                                    <h5>{{ prenda_destino.nombre }}</h5>
+                                    <p class="text-muted mb-0">{{ prenda_destino.descripcion }}</p>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="prenda_origen" class="form-label">Elige la prenda que ofreces *</label>
+                                <select class="form-select" id="prenda_origen" name="prenda_origen" required>
+                                    <option value="">Selecciona una de tus prendas</option>
+                                    {% for prenda in mis_prendas %}
+                                    <option value="{{ prenda.id_prenda }}">{{ prenda.nombre }} ({{ prenda.categoria }} - Talla {{ prenda.talla }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% if not mis_prendas %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i> No tienes prendas publicadas. <a href="{% url 'crear_prenda' %}">Publica tu primera prenda</a>
+                            </div>
+                            {% endif %}
+                            <div class="d-grid gap-2">
+                                {% if mis_prendas %}<button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-check-circle"></i> Enviar Propuesta</button>{% endif %}
+                                <a href="{% url 'detalle_prenda' prenda_destino.id_prenda %}" class="btn btn-outline-secondary">Cancelar</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

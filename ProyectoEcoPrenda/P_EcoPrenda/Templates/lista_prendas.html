@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Prendas Disponibles - EcoPrenda{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h2><i class="bi bi-bag"></i> Prendas Disponibles</h2>
+                <p class="text-muted">Encuentra la prenda perfecta para ti</p>
+            </div>
+            <div class="col-md-4 text-end">
+                {% if usuario %}
+                <a href="{% url 'crear_prenda' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Publicar Prenda
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" action="{% url 'lista_prendas' %}">
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <select name="categoria" class="form-select">
+                                <option value="">Todas las categorías</option>
+                                {% for cat in categorias %}
+                                <option value="{{ cat }}">{{ cat }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <select name="talla" class="form-select">
+                                <option value="">Todas las tallas</option>
+                                {% for t in tallas %}
+                                <option value="{{ t }}">{{ t }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <select name="estado" class="form-select">
+                                <option value="">Todos los estados</option>
+                                {% for e in estados %}
+                                <option value="{{ e }}">{{ e }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Lista de Prendas -->
+        <div class="row">
+            {% if prendas %}
+                {% for prenda in prendas %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        {% if prenda.imagen_prenda %}
+                            <img src="{{ prenda.imagen_prenda.url }}" class="card-img-top" alt="Imagen de {{ prenda.nombre }}" style="height: 200px; object-fit: cover;">
+                        {% else %}
+                            <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted" style="height: 200px;">
+                                <span>Sin imagen</span>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-success">{{ prenda.categoria }}</span>
+                                <span class="badge {% if prenda.estado == 'DISPONIBLE' %}bg-success{% elif prenda.estado == 'RESERVADA' %}bg-warning{% elif prenda.estado == 'EN_PROCESO_ENTREGA' %}bg-info{% elif prenda.estado == 'COMPLETADA' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                    {{ prenda.get_estado_display }}
+                                </span>
+                            </div>
+                            <h5 class="card-title">{{ prenda.nombre }}</h5>
+                            <p class="card-text text-muted">{{ prenda.descripcion|truncatewords:20 }}</p>
+                            
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-person"></i> {{ prenda.id_usuario.nombre }}
+                                </small>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <small><strong>Talla:</strong> {{ prenda.talla }}</small>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar"></i> {{ prenda.fecha_publicacion|date:"d/m/Y" }}
+                                </small>
+                            </div>
+                            
+                            <a href="{% url 'detalle_prenda' prenda.id_prenda %}" class="btn btn-outline-primary w-100">
+                                Ver Detalle
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle"></i> No se encontraron prendas con los filtros seleccionados.
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

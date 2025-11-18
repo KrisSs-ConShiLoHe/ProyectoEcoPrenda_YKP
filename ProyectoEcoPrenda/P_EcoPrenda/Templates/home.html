@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inicio - Plataforma de Prendas Sostenible{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- Sección Héroe -->
+<section class="hero-section py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold hero-title">Moda Sostenible y Circular</h1>
+                <p class="lead hero-subtitle">Intercambia, vende o dona prendas de manera fácil, transparente y trazable. Juntos reducimos el impacto ambiental de la industria textil.</p>
+                <div class="d-grid gap-2 d-md-flex">
+                    {% if not usuario %}
+                        <a href="{% url 'registro' %}" class="btn btn-primary btn-lg">Comenzar Ahora</a>
+                        <a href="{% url 'lista_prendas' %}" class="btn btn-primary btn-lg">Ver Prendas</a>
+                    {% else %}
+                        <a href="{% url 'crear_prenda' %}" class="btn btn-primary btn-lg">Publicar Prenda</a>
+                        <a href="{% url 'lista_prendas' %}" class="btn btn-primary btn-lg">Explorar</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-6 text-center hero-icons">
+                <i class="bi bi-recycle display-1 text-primary"></i>
+                <i class="bi bi-tree display-1 text-success ms-3"></i>
+                <i class="bi bi-heart display-1 text-danger ms-3"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Sección de Estadísticas -->
+<section class="stats-section py-5">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 bg-light h-100 stat-card">
+                    <div class="card-body">
+                        <i class="bi bi-bag-check display-4 text-primary"></i>
+                        <h3 class="mt-3">{{ total_prendas }}</h3>
+                        <p class="text-muted">Prendas Disponibles</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 bg-light h-100 stat-card">
+                    <div class="card-body">
+                        <i class="bi bi-people display-4 text-success"></i>
+                        <h3 class="mt-3">{{ total_usuarios }}</h3>
+                        <p class="text-muted">Usuarios Registrados</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 bg-light h-100 stat-card">
+                    <div class="card-body">
+                        <i class="bi bi-cloud display-4 text-info"></i>
+                        <h3 class="mt-3">{{ impacto_total.total_carbono|default:"0" }} kg</h3>
+                        <p class="text-muted">CO₂ Evitado</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 bg-light h-100 stat-card">
+                    <div class="card-body">
+                        <i class="bi bi-lightning display-4 text-warning"></i>
+                        <h3 class="mt-3">{{ impacto_total.total_energia|default:"0" }} kWh</h3>
+                        <p class="text-muted">Energía Ahorrada</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5">¿Cómo Funciona?</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 feature-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-arrow-left-right display-3 text-primary mb-3"></i>
+                        <h4>Intercambio</h4>
+                        <p>Intercambia prendas directamente con otros usuarios. Dale nueva vida a tu ropa.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 feature-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-cart-check display-3 text-success mb-3"></i>
+                        <h4>Venta</h4>
+                        <p>Vende tus prendas de segunda mano de forma segura y transparente.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 feature-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-heart-fill display-3 text-danger mb-3"></i>
+                        <h4>Donación</h4>
+                        <p>Dona a fundaciones verificadas. Conoce el destino de tus prendas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Impact Banner -->
+<section class="impact-banner py-5 text-white">
+    <div class="container text-center">
+        <h2 class="mb-4">Impacto Ambiental Colectivo</h2>
+        <p class="lead">Cada prenda reutilizada contribuye a un planeta más sostenible</p>
+        <a href="{% url 'panel_impacto' %}" class="btn btn-light btn-lg mt-3">Ver Impacto Completo</a>
+    </div>
+</section>
+
+{% endblock %}

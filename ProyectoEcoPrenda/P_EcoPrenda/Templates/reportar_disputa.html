@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Reportar Problema - EcoPrenda{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h2 class="mb-4"><i class="bi bi-exclamation-triangle text-danger"></i> Reportar Problema / Disputa</h2>
+                        
+                        <div class="alert alert-info mb-4">
+                            <i class="bi bi-info-circle"></i> <strong>Información importante:</strong>
+                            <p class="mb-0">Por favor describe detalladamente el problema con la prenda. Nuestro equipo de administración revisará tu reporte, consultará el historial de mensajes entre ustedes, y pedirá pruebas (fotos, comprobantes) si es necesario.</p>
+                        </div>
+
+                        <!-- Detalles de la transacción -->
+                        <div class="card mb-4 bg-light">
+                            <div class="card-body">
+                                <h5>Detalles de la Transacción</h5>
+                                <hr>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Prenda:</strong> {{ transaccion.id_prenda.nombre }}<br>
+                                        <strong>Tipo:</strong> {{ transaccion.id_tipo.nombre_tipo }}<br>
+                                        <strong>Estado:</strong> {{ transaccion.get_estado_display }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>De:</strong> {{ transaccion.id_usuario_origen.nombre }}<br>
+                                        <strong>Para:</strong> {{ transaccion.id_usuario_destino.nombre }}<br>
+                                        <strong>Código:</strong> #{{ transaccion.id_transaccion }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Formulario de reporte -->
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="razon_disputa" class="form-label">
+                                    Describe el problema <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control" id="razon_disputa" name="razon_disputa" rows="6" 
+                                          placeholder="Por favor sé específico y detallado. Ejemplos: La prenda llegó dañada, no corresponde a la descripción, no llegó el paquete, etc." 
+                                          required></textarea>
+                                <small class="form-text text-muted">Mínimo 10 caracteres. Sé lo más específico posible.</small>
+                            </div>
+
+                            <div class="alert alert-warning mb-4">
+                                <i class="bi bi-exclamation-circle"></i> <strong>Aviso:</strong>
+                                <p class="mb-0">
+                                    El equipo de administración revisará este reporte. Ten en cuenta que reportes falsos o abusivos pueden resultar en consecuencias para tu cuenta, incluyendo suspensión o penalización de reputación.
+                                </p>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-danger btn-lg">
+                                    <i class="bi bi-send"></i> Enviar Reporte
+                                </button>
+                                <a href="{% url 'mis_transacciones' %}" class="btn btn-outline-secondary">
+                                    Cancelar
+                                </a>
+                            </div>
+                        </form>
+
+                        <hr class="my-4">
+
+                        <!-- Información de qué sucede después -->
+                        <div class="card border-info">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-lightbulb text-info"></i> ¿Qué sucede después?</h6>
+                                <ol class="mb-0">
+                                    <li>Tu reporte se marca como <strong>En Disputa</strong> en tu historial de transacciones.</li>
+                                    <li>El equipo de administración recibe notificación inmediata.</li>
+                                    <li>Se revisa el chat completo entre tú y {{ transaccion.id_usuario_origen.nombre }}.</li>
+                                    <li>Se solicitan pruebas (fotos, comprobantes de pago/envío) a ambas partes.</li>
+                                    <li>El administrador resuelve la disputa marcándola como <strong>Completada</strong> o <strong>Cancelada</strong>.</li>
+                                    <li>Recibirás una notificación con la resolución.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Información de Sesión - EcoPrenda{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-shield-lock"></i> Información de Tu Sesión
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            Esta página muestra información técnica sobre tu sesión activa.
+                        </div>
+
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <th width="40%"><i class="bi bi-person"></i> Usuario</th>
+                                    <td>{{ session_data.usuario_nombre }} (ID: {{ session_data.usuario_id }})</td>
+                                </tr>
+                                <tr>
+                                    <th><i class="bi bi-envelope"></i> Correo</th>
+                                    <td>{{ session_data.usuario_correo }}</td>
+                                </tr>
+                                <tr>
+                                    <th><i class="bi bi-key"></i> Session Key</th>
+                                    <td><code>{{ session_data.session_key|truncatechars:20 }}</code></td>
+                                </tr>
+                                {% if session_data.login_timestamp %}
+                                <tr>
+                                    <th><i class="bi bi-clock-history"></i> Inicio de Sesión</th>
+                                    <td>{{ session_data.login_timestamp }}</td>
+                                </tr>
+                                <tr>
+                                    <th><i class="bi bi-hourglass-split"></i> Duración de Sesión</th>
+                                    <td>{{ session_data.tiempo_sesion }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if session_data.ultima_actividad %}
+                                <tr>
+                                    <th><i class="bi bi-activity"></i> Última Actividad</th>
+                                    <td>{{ session_data.ultima_actividad }}</td>
+                                </tr>
+                                <tr>
+                                    <th><i class="bi bi-pause-circle"></i> Tiempo Inactivo</th>
+                                    <td id="tiempo-inactivo">{{ session_data.tiempo_inactivo }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if session_data.expira_en %}
+                                <tr>
+                                    <th><i class="bi bi-alarm"></i> Expira en</th>
+                                    <td>{{ session_data.expira_en }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <th><i class="bi bi-arrow-repeat"></i> Requests en esta sesión</th>
+                                    <td>{{ session_data.request_counter }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            <strong>Nota de seguridad:</strong> Tu sesión se cerrará automáticamente después de 30 minutos de inactividad.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-primary" id="renovar-sesion">
+                                <i class="bi bi-arrow-clockwise"></i> Renovar Sesión
+                            </button>
+                            <a href="{% url 'perfil' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Volver al Perfil
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monitor en tiempo real -->
+                <div class="card mt-4 shadow">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-broadcast"></i> Monitor en Tiempo Real
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="status-monitor">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                                <p class="mt-2">Verificando estado...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Renovar sesión
+    document.getElementById('renovar-sesion').addEventListener('click', function() {
+        fetch('{% url "renovar_sesion" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Sesión renovada correctamente');
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ Error al renovar sesión');
+        });
+    });
+
+    // Monitor en tiempo real
+    function verificarEstado() {
+        fetch('{% url "session_status" %}')
+        .then(response => response.json())
+        .then(data => {
+            const minutos = Math.floor(data.tiempo_restante / 60);
+            const segundos = data.tiempo_restante % 60;
+            
+            let alertClass = 'alert-success';
+            if (data.tiempo_restante < 300) alertClass = 'alert-warning';
+            if (data.tiempo_restante < 120) alertClass = 'alert-danger';
+            
+            document.getElementById('status-monitor').innerHTML = `
+                <div class="alert ${alertClass}">
+                    <h6><i class="bi bi-check-circle"></i> Sesión Activa</h6>
+                    <p class="mb-0">Tiempo restante: <strong>${minutos}m ${segundos}s</strong></p>
+                </div>
+            `;
+        })
+        .catch(error => {
+            document.getElementById('status-monitor').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-x-circle"></i> Error al verificar estado
+                </div>
+            `;
+        });
+    }
+
+    // Verificar cada 5 segundos
+    verificarEstado();
+    setInterval(verificarEstado, 5000);
+</script>
+{% endblock %}

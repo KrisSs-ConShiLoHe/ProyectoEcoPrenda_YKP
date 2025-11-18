@@ -1,0 +1,275 @@
+<!-- Banner de Cookies -->
+<div id="cookie-banner" class="cookie-banner" style="display: none;">
+    <div class="cookie-banner-content">
+        <div class="cookie-banner-text">
+            <h5><i class="bi bi-shield-check"></i> Configuración de Cookies</h5>
+            <p>
+                Utilizamos cookies para mejorar tu experiencia, personalizar contenido y analizar nuestro tráfico. 
+                Puedes aceptar todas las cookies o configurarlas según tus preferencias.
+            </p>
+        </div>
+        
+        <div class="cookie-banner-buttons">
+            <button type="button" class="btn btn-primary" id="accept-all-cookies">
+                <i class="bi bi-check-circle"></i> Aceptar Todas
+            </button>
+            <button type="button" class="btn btn-outline-primary" id="reject-cookies">
+                <i class="bi bi-x-circle"></i> Solo Esenciales
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="customize-cookies">
+                <i class="bi bi-gear"></i> Personalizar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Personalización de Cookies -->
+<div class="modal fade" id="cookieModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-sliders"></i> Configuración de Cookies
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="lead">Elige qué tipos de cookies deseas permitir:</p>
+                
+                <!-- Cookies Esenciales -->
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">
+                                    <i class="bi bi-shield-fill-check text-success"></i> Cookies Esenciales
+                                </h6>
+                                <p class="text-muted small mb-0">
+                                    Necesarias para el funcionamiento básico del sitio (login, sesión, seguridad).
+                                </p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="cookie-esenciales" checked disabled>
+                                <label class="form-check-label" for="cookie-esenciales">
+                                    <span class="badge bg-success">Siempre Activas</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Cookies de Funcionalidad -->
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">
+                                    <i class="bi bi-toggles text-info"></i> Cookies de Funcionalidad
+                                </h6>
+                                <p class="text-muted small mb-0">
+                                    Permiten recordar tus preferencias (idioma, tema, configuraciones).
+                                </p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="cookie-funcionalidad" checked>
+                                <label class="form-check-label" for="cookie-funcionalidad"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Cookies Analíticas -->
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">
+                                    <i class="bi bi-graph-up text-primary"></i> Cookies Analíticas
+                                </h6>
+                                <p class="text-muted small mb-0">
+                                    Nos ayudan a entender cómo usas el sitio para mejorarlo (Google Analytics).
+                                </p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="cookie-analiticas" checked>
+                                <label class="form-check-label" for="cookie-analiticas"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Cookies de Marketing -->
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">
+                                    <i class="bi bi-megaphone text-warning"></i> Cookies de Marketing
+                                </h6>
+                                <p class="text-muted small mb-0">
+                                    Personalizan anuncios y contenido relevante para ti.
+                                </p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="cookie-marketing">
+                                <label class="form-check-label" for="cookie-marketing"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> 
+                    Puedes cambiar estas preferencias en cualquier momento desde el pie de página.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" id="save-cookie-preferences">
+                    <i class="bi bi-save"></i> Guardar Preferencias
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar si ya se configuraron las cookies
+    const cookieConsent = getCookie('cookie_consent');
+    
+    if (!cookieConsent) {
+        // Mostrar banner después de 1 segundo
+        setTimeout(() => {
+            document.getElementById('cookie-banner').style.display = 'block';
+        }, 1000);
+    }
+    
+    // Aceptar todas las cookies
+    document.getElementById('accept-all-cookies').addEventListener('click', function() {
+        acceptAllCookies();
+    });
+    
+    // Rechazar cookies no esenciales
+    document.getElementById('reject-cookies').addEventListener('click', function() {
+        rejectCookies();
+    });
+    
+    // Personalizar cookies: cerrar modal si está abierto y redirigir a la página de configuración
+    document.getElementById('customize-cookies').addEventListener('click', function() {
+        const modalEl = document.getElementById('cookieModal');
+
+        // Si hay una instancia de Bootstrap Modal abierta, ciérrala primero y redirige cuando termine la transición
+        const bsInstance = bootstrap.Modal.getInstance(modalEl);
+        if (bsInstance) {
+            const handler = function() {
+                modalEl.removeEventListener('hidden.bs.modal', handler);
+                window.location.href = '/configurar-cookies/';
+            };
+            modalEl.addEventListener('hidden.bs.modal', handler);
+            bsInstance.hide();
+            return;
+        }
+
+        // Si no hay modal abierto, redirige inmediatamente
+        window.location.href = '/configurar-cookies/';
+    });
+    
+    // Guardar preferencias personalizadas
+    document.getElementById('save-cookie-preferences').addEventListener('click', function() {
+        saveCustomPreferences();
+    });
+});
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+function acceptAllCookies() {
+    fetch('/aceptar-cookies/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            esenciales: true,
+            funcionalidad: true,
+            analiticas: true,
+            marketing: true
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('cookie-banner').style.display = 'none';
+            showToast('Preferencias guardadas correctamente :V');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function rejectCookies() {
+    fetch('/rechazar-cookies/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('cookie-banner').style.display = 'none';
+            showToast('ℹ️ Solo se usarán cookies esenciales');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function saveCustomPreferences() {
+    const preferencias = {
+        esenciales: true,
+        funcionalidad: document.getElementById('cookie-funcionalidad').checked,
+        analiticas: document.getElementById('cookie-analiticas').checked,
+        marketing: document.getElementById('cookie-marketing').checked
+    };
+    
+    fetch('/aceptar-cookies/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(preferencias)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('cookie-banner').style.display = 'none';
+            bootstrap.Modal.getInstance(document.getElementById('cookieModal')).hide();
+            showToast('Preferencias guardadas correctamente :V');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function showToast(message) {
+    // Implementación simple de notificación
+    alert(message);
+}
+</script>

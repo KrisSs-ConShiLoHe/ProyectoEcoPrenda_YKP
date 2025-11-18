@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Logros - EcoPrenda{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+    <h2 class="mb-4 text-center">
+        <i class="bi bi-trophy"></i> Mis Logros
+    </h2>
+    {% if logros %}
+        <div class="row">
+            {% for ul in logros %}
+                <div class="col-md-4 col-lg-3 mb-4">
+                    <div class="card h-100 shadow-sm border-success">
+                        <div class="card-body text-center">
+                            <i class="bi {{ ul.logro.icono }} display-3 mb-2 text-warning"></i>
+                            <h5 class="card-title">{{ ul.logro.nombre }}</h5>
+                            <span class="badge bg-secondary mb-2">
+                                {{ ul.logro.tipo|capfirst }}
+                            </span>
+                            <p class="card-text mb-2">{{ ul.logro.descripcion }}</p>
+                            <span class="badge bg-success">
+                                Obtenido: {{ ul.fecha_desbloqueo|date:"d/m/Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center">
+            No has desbloqueado logros aún.<br>
+            ¡Participa en la plataforma para ganar recompensas y reconocimientos!
+        </div>
+    {% endif %}
+    <div class="mt-4 text-center">
+        <a href="{% url 'perfil' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a Mi Perfil
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Buscar Prendas - EcoPrenda{% endblock %}
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <h2 class="mb-4"><i class="bi bi-search"></i> Buscar Prendas</h2>
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" action="{% url 'buscar_prendas' %}">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <input type="text" name="q" class="form-control" placeholder="Buscar por nombre..." value="{{ query }}">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <select name="categoria" class="form-select">
+                                <option value="">Todas las categorías</option>
+                                {% for cat in categorias %}<option value="{{ cat }}">{{ cat }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <select name="talla" class="form-select">
+                                <option value="">Todas las tallas</option>
+                                {% for t in tallas %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <select name="estado" class="form-select">
+                                <option value="">Todos los estados</option>
+                                {% for e in estados %}<option value="{{ e }}">{{ e }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Buscar</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% if prendas %}
+        <div class="row">
+            {% for prenda in prendas %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    {% if prenda.imagen_prenda %}
+                        <img src="{{ prenda.imagen_prenda.url }}" class="card-img-top" alt="Imagen de {{ prenda.nombre }}" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                        <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted" style="height: 200px;">
+                            <span>Sin imagen</span>
+                        </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="badge bg-success">{{ prenda.categoria }}</span>
+                            <span class="badge bg-info">{{ prenda.estado }}</span>
+                        </div>
+                        <h5 class="card-title">{{ prenda.nombre }}</h5>
+                        <p class="card-text text-muted">{{ prenda.descripcion|truncatewords:15 }}</p>
+                        <div class="mb-2">
+                            <small><strong>Talla:</strong> {{ prenda.talla }}</small><br>
+                            <small class="text-muted"><i class="bi bi-person"></i> {{ prenda.id_usuario.nombre }}</small>
+                        </div>
+                        <a href="{% url 'detalle_prenda' prenda.id_prenda %}" class="btn btn-outline-primary w-100">Ver Detalle</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="bi bi-inbox"></i> No se encontraron prendas con los criterios de búsqueda
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

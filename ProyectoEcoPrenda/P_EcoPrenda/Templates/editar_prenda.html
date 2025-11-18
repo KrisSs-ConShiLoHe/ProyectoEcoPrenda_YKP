@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Editar Prenda - EcoPrenda{% endblock %}
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h2 class="mb-4"><i class="bi bi-pencil text-warning"></i> Editar Prenda</h2>
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">Nombre *</label>
+                                <input type="text" class="form-control" id="nombre" name="nombre" value="{{ prenda.nombre }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="descripcion" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="descripcion" name="descripcion" rows="4">{{ prenda.descripcion }}</textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="categoria" class="form-label">Categoría</label>
+                                    <select class="form-select" id="categoria" name="categoria" required>
+                                        <option value="">Selecciona</option>
+                                        {% for cat in categorias %}
+                                            <option value="{{ cat }}" {% if prenda.categoria == cat %}selected{% endif %}>{{ cat }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="talla" class="form-label">Talla</label>
+                                    <select class="form-select" id="talla" name="talla" required>
+                                        <option value="">Selecciona</option>
+                                        {% for t in tallas %}
+                                            <option value="{{ t }}" {% if prenda.talla == t %}selected{% endif %}>{{ t }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="estado" class="form-label">Estado</label>
+                                <select class="form-select" id="estado" name="estado" required>
+                                    <option value="">Selecciona</option>
+                                    {% for e in estados %}
+                                        <option value="{{ e }}" {% if prenda.estado == e %}selected{% endif %}>{{ e }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Imagen actual y cambio -->
+                            <div class="mb-4">
+                                <label class="form-label">Imagen actual</label>
+                                {% if prenda.imagen_prenda %}
+                                    <img src="{{ prenda.imagen_prenda.url }}" alt="Imagen de {{ prenda.nombre }}" class="img-fluid rounded border mb-2" style="max-height: 250px; object-fit: cover;">
+                                {% else %}
+                                    <div class="d-flex align-items-center justify-content-center bg-light border rounded mb-2" style="height: 180px;">
+                                        <span class="text-muted">Sin imagen</span>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <label for="imagen_prenda" class="form-label">Cambiar imagen</label>
+                                    <input class="form-control" type="file" id="imagen_prenda" name="imagen_prenda" accept="image/*">
+                                    <div class="form-text">Deja vacío para mantener la imagen actual.</div>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-warning btn-lg"><i class="bi bi-check-circle"></i> Guardar Cambios</button>
+                                <a href="{% url 'detalle_prenda' prenda.id_prenda %}" class="btn btn-outline-secondary">Cancelar</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

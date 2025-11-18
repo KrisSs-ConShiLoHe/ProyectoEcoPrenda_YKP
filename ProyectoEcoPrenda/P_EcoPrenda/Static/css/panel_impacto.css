@@ -1,0 +1,62 @@
+/* Colores principales */
+:root {
+    --principal: #2b3bcc;
+    --hover: #346085;
+    --petroleo: #4c2f72;
+    --suave: #924dad;
+    --claro: #b652cf;
+}
+
+/* Hero section */
+.hero-impacto {
+    background: linear-gradient(135deg, var(--principal), var(--petroleo));
+}
+
+/* CTA section */
+.cta-impacto {
+    background: linear-gradient(135deg, var(--petroleo), var(--principal));
+}
+
+/* Tarjetas */
+.stat-card, .feature-card, .fundacion-card, .user-card {
+    border-radius: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover,
+.feature-card:hover,
+.fundacion-card:hover,
+.user-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Fondo beige para secciones suaves */
+.bg-soft {
+    background-color: var(--suave);
+}
+
+/* Ranking usuarios */
+.rank-badge {
+    background-color: var(--principal);
+    color: #fff;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
+/* Botones */
+.btn-primary {
+    background-color: var(--principal);
+    border-color: var(--principal);
+}
+
+.btn-primary:hover {
+    background-color: var(--hover);
+    border-color: var(--hover);
+}

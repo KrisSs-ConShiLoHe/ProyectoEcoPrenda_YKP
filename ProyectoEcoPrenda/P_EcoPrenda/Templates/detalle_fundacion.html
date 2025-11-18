@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ fundacion.nombre }} - EcoPrenda{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">Inicio</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'lista_fundaciones' %}">Fundaciones</a></li>
+                <li class="breadcrumb-item active">{{ fundacion.nombre }}</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-suit-heart-fill display-1 text-danger mb-3"></i>
+                        <h3>{{ fundacion.nombre }}</h3>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h6><i class="bi bi-info-circle"></i> Información de Contacto</h6>
+                        
+                        {% if fundacion.direccion %}
+                        <p class="mb-2">
+                            <i class="bi bi-geo-alt"></i> 
+                            <strong>Dirección:</strong><br>
+                            {{ fundacion.direccion }}
+                        </p>
+                        {% endif %}
+
+                        {% if fundacion.telefono %}
+                        <p class="mb-2">
+                            <i class="bi bi-telephone"></i> 
+                            <strong>Teléfono:</strong><br>
+                            <a href="tel:{{ fundacion.telefono }}">{{ fundacion.telefono }}</a>
+                        </p>
+                        {% endif %}
+
+                        {% if fundacion.correo_contacto %}
+                        <p class="mb-0">
+                            <i class="bi bi-envelope"></i> 
+                            <strong>Correo:</strong><br>
+                            <a href="mailto:{{ fundacion.correo_contacto }}">{{ fundacion.correo_contacto }}</a>
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <!-- Estadísticas -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h4>{{ donaciones|length }}</h4>
+                                <p class="mb-0">Donaciones Recibidas</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h4>{{ impacto_total.total_carbono|default:"0"|floatformat:1 }}</h4>
+                                <p class="mb-0">kg CO₂ Evitados</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Donaciones recibidas -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-box-seam"></i> Historial de Donaciones
+                        </h5>
+
+                        {% if donaciones %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Prenda</th>
+                                        <th>Donante</th>
+                                        <th>Fecha</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for donacion in donaciones %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'detalle_prenda' donacion.id_prenda.id_prenda %}">
+                                                {{ donacion.id_prenda.nombre }}
+                                            </a>
+                                        </td>
+                                        <td>{{ donacion.id_usuario_origen.nombre }}</td>
+                                        <td>{{ donacion.fecha_transaccion|date:"d/m/Y H:i" }}</td>
+                                        <td>
+                                            <span class="badge bg-success">{{ donacion.estado }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-4">
+                            <i class="bi bi-inbox"></i><br>
+                            Aún no ha recibido donaciones
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

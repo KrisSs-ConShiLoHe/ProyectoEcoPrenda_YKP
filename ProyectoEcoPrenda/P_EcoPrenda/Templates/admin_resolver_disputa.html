@@ -1,0 +1,114 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}Resolver Disputa - Admin{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h1>Resolver Disputa - Transacción #{{ transaccion.id_transaccion }}</h1>
+    <hr>
+    
+    <!-- Información de la Transacción -->
+    <div style="margin-bottom: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 5px;">
+        <h3>Detalles de la Transacción</h3>
+        <table>
+            <tr>
+                <td style="padding: 8px; font-weight: bold;">Prenda:</td>
+                <td style="padding: 8px;">{{ transaccion.id_prenda.nombre }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; font-weight: bold;">Tipo:</td>
+                <td style="padding: 8px;">{{ transaccion.id_tipo.nombre_tipo }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; font-weight: bold;">Estado:</td>
+                <td style="padding: 8px; color: red; font-weight: bold;">{{ transaccion.get_estado_display }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; font-weight: bold;">Origen (Vendedor):</td>
+                <td style="padding: 8px;">{{ transaccion.id_usuario_origen.nombre }} ({{ transaccion.id_usuario_origen.correo }})</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; font-weight: bold;">Destino (Comprador):</td>
+                <td style="padding: 8px;">{{ transaccion.id_usuario_destino.nombre }} ({{ transaccion.id_usuario_destino.correo }})</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; font-weight: bold;">Reportado por:</td>
+                <td style="padding: 8px;">{{ transaccion.reportado_por.nombre }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; font-weight: bold;">Fecha de Disputa:</td>
+                <td style="padding: 8px;">{{ transaccion.fecha_disputa|date:"d/m/Y H:i" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Razón de la Disputa -->
+    <div style="margin-bottom: 20px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 5px;">
+        <h3>Razón de la Disputa</h3>
+        <p style="white-space: pre-wrap; font-size: 14px;">{{ transaccion.razon_disputa }}</p>
+    </div>
+
+    <!-- Historial de Mensajes -->
+    <div style="margin-bottom: 20px; padding: 15px; background-color: #e7f3ff; border: 1px solid #2196F3; border-radius: 5px;">
+        <h3>Historial de Mensajes entre Usuarios</h3>
+        <div style="max-height: 400px; overflow-y: auto; padding: 10px; background-color: white; border: 1px solid #ccc; border-radius: 3px;">
+            {% if mensajes %}
+                {% for msg in mensajes %}
+                <div style="margin-bottom: 10px; padding: 8px; border-left: 3px solid {% if msg.id_emisor == transaccion.id_usuario_origen %}#007bff{% else %}#28a745{% endif %};">
+                    <strong>{{ msg.id_emisor.nombre }}:</strong> {{ msg.contenido }}<br>
+                    <small style="color: #666;">{{ msg.fecha_envio|date:"d/m/Y H:i" }}</small>
+                </div>
+                {% endfor %}
+            {% else %}
+            <p style="color: #666;">No hay mensajes registrados entre estos usuarios.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Formulario de Resolución -->
+    <div style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 5px;">
+        <h3>Tomar Decisión</h3>
+        <form method="post" style="display: flex; gap: 10px; align-items: flex-start;">
+            {% csrf_token %}
+            
+            <div style="flex: 1;">
+                <label for="resolucion" style="display: block; margin-bottom: 5px; font-weight: bold;">Resolución *</label>
+                <select name="resolucion" id="resolucion" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px;">
+                    <option value="">-- Selecciona --</option>
+                    <option value="COMPLETADA">✅ COMPLETADA - El reclamo es infundado, transacción se completa</option>
+                    <option value="CANCELADA">❌ CANCELADA - El reclamo es válido, se cancela y penaliza al vendedor</option>
+                </select>
+            </div>
+
+            <div style="flex: 1;">
+                <label for="notas_admin" style="display: block; margin-bottom: 5px; font-weight: bold;">Notas (Opcional)</label>
+                <textarea name="notas_admin" id="notas_admin" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; font-family: Arial;" placeholder="Detalles de tu decisión..."></textarea>
+            </div>
+        </form>
+
+        <div style="margin-top: 15px; text-align: right;">
+            <button type="submit" form="resolucion-form" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">
+                ✓ Resolver Disputa
+            </button>
+            <a href="/admin/" style="padding: 10px 20px; background-color: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer; text-decoration: none; display: inline-block; margin-left: 10px;">
+                Volver
+            </a>
+        </div>
+
+        <form method="post" id="resolucion-form" style="display: none;">
+            {% csrf_token %}
+            <input type="hidden" name="resolucion" id="form-resolucion">
+            <input type="hidden" name="notas_admin" id="form-notas_admin">
+        </form>
+    </div>
+
+    <script>
+        document.querySelector('button[type="submit"]').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('form-resolucion').value = document.getElementById('resolucion').value;
+            document.getElementById('form-notas_admin').value = document.getElementById('notas_admin').value;
+            document.getElementById('resolucion-form').submit();
+        });
+    </script>
+</div>
+{% endblock %}

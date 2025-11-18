@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Publicar Prenda - EcoPrenda{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h2 class="mb-4">
+                            <i class="bi bi-plus-circle text-success"></i> Publicar Nueva Prenda
+                        </h2>
+
+                        <form method="post" action="{% url 'crear_prenda' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">Nombre de la prenda *</label>
+                                <input type="text" class="form-control" id="nombre" name="nombre" required 
+                                       placeholder="Ej: Chaqueta de cuero negra">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="descripcion" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="descripcion" name="descripcion" rows="4"
+                                          placeholder="Describe el estado, características y cualquier detalle relevante"></textarea>
+                            </div>
+
+                            <!-- Imagen de la prenda -->
+                            <div class="mb-3">
+                                <label for="imagen_prenda" class="form-label">Imagen de la prenda</label>
+                                <input class="form-control" type="file" id="imagen_prenda" name="imagen_prenda" accept="image/*">
+                                <div class="form-text">Formatos permitidos: JPG, PNG, GIF. Tamaño máx. 10MB</div>
+                            </div>
+
+                            <!-- Previsualización -->
+                            <div class="mb-3">
+                                 <div id="preview-placeholder" class="d-flex align-items-center justify-content-center bg-light border rounded" style="height: 200px;">
+                                    <span class="text-muted">Sin imagen</span>
+                                </div>
+                                <img id="preview-imagen" src="" alt="Previsualización" class="img-fluid rounded border d-none mt-2">
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="categoria" class="form-label">Categoría *</label>
+                                    <select class="form-select" id="categoria" name="categoria" required>
+                                        <option value="">Selecciona una categoría</option>
+                                        {% for cat in categorias %}
+                                        <option value="{{ cat }}">{{ cat }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="talla" class="form-label">Talla</label>
+                                    <select class="form-select" id="talla" name="talla">
+                                        <option value="">Selecciona una talla</option>
+                                        {% for t in tallas %}
+                                        <option value="{{ t }}">{{ t }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="estado" class="form-label">Estado de la prenda</label>
+                                <select class="form-select" id="estado" name="estado">
+                                    <option value="">Selecciona el estado</option>
+                                    {% for e in estados %}
+                                    <option value="{{ e }}">{{ e }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> <strong>Impacto Ambiental:</strong> 
+                                Al publicar esta prenda, estarás contribuyendo a reducir aproximadamente 
+                                <strong>5.5 kg de CO₂</strong> y ahorrando <strong>2.7 kWh</strong> de energía.
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-check-circle"></i> Publicar Prenda
+                                </button>
+                                <a href="{% url 'mis_prendas' %}" class="btn btn-outline-secondary">
+                                    Cancelar
+                                </a>
+                            </div>
+                        </form>
+                        <script>
+                        (function () {
+                          function ready(fn) {
+                            if (document.readyState !== 'loading') { fn(); }
+                            else { document.addEventListener('DOMContentLoaded', fn); }
+                          }
+                          ready(function () {
+                            var input = document.getElementById('imagen_prenda');
+                            var img = document.getElementById('preview-imagen');
+                            var placeholder = document.getElementById('preview-placeholder');
+
+                            if (!input || !img) {
+                              return;
+                            }
+
+                            input.addEventListener('change', function () {
+                              var file = this.files && this.files[0];
+                              if (!file) {
+                                if (placeholder) placeholder.classList.remove('d-none');
+                                img.src = '';
+                                img.classList.add('d-none');
+                                return;
+                              }
+
+                              if (!file.type || !file.type.startsWith('image/')) {
+                                alert('Selecciona un archivo de imagen válido.');
+                                this.value = '';
+                                if (placeholder) placeholder.classList.remove('d-none');
+                                img.src = '';
+                                img.classList.add('d-none');
+                                return;
+                              }
+
+                              var reader = new FileReader();
+                              reader.onload = function (e) {
+                                img.src = e.target.result;
+                                img.alt = 'Previsualización';
+                                img.classList.remove('d-none');
+                                if (placeholder) placeholder.classList.add('d-none');
+                              };
+                              reader.readAsDataURL(file);
+                            });
+                          });
+                        })();
+                        </script>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

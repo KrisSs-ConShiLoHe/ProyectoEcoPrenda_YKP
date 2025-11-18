@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Iniciar Sesión - EcoPrenda{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="card shadow">
+                    <div class="card-body p-5">
+                        <h2 class="text-center mb-4">
+                            <i class="bi bi-box-arrow-in-right text-success"></i> Iniciar Sesión
+                        </h2>
+                        
+                        <form method="post" action="{% url 'login' %}">
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label for="correo" class="form-label">Correo Electrónico</label>
+                                <input type="email" class="form-control" id="correo" name="correo" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="contrasena" class="form-label">Contraseña</label>
+                                <input type="password" class="form-control" id="contrasena" name="contrasena" required>
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="recordar" name="recordar">
+                                <label class="form-check-label" for="recordar">
+                                    Recordarme por 7 días
+                                </label>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100 py-2 mb-3">
+                                <i class="bi bi-check-circle"></i> Ingresar
+                            </button>
+                            
+                            <p class="text-center mb-0">
+                                ¿No tienes cuenta? <a href="{% url 'registro' %}">Regístrate aquí</a>
+                            </p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

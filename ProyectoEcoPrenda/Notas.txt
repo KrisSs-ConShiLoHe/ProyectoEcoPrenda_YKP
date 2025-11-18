@@ -1,0 +1,149 @@
+# Recordar que se debe configurar en settings.py, para la base de datos y allowd_hosts
+
+Comandos:
+Instalacion de paquetes:
+pip install django
+pip install pymysql
+pip install mysqlclient
+pip install djangorestframework
+pip install pillow
+
+_________________________________________________________________________________________________________________
+
+Agregar las tablas en la base de datos:
+python manage.py makemigrations A_EcoPrenda
+python manage.py makemigrations
+python manage.py migrate A_EcoPrenda
+python manage.py migrate
+# En caso de que no funcione el comando de migrate, se debe eliminar manualmente la carpeta de migrations y luego crearla con el archivo __init__.py
+
+_________________________________________________________________________________________________________________
+
+Crear/Registrar las fundaciones:
+# Se puede tambien por PhpMyAdmin (lo encuentro mas facil y directo)
+python manage.py Shell
+from A_EcoPrenda.models import Fundacion
+# En "activa" pueden incluir True o False, eso es para evidenciar que la fundacion esta disponible 
+Fundacion.objects.create(nombre="Tedoy Ropa", correo_contacto="", telefono="", direccion="", imagen_fundacion=None, descripcion="", activa=True)
+Fundacion.objects.create(nombre="FundaVida", correo_contacto="", telefono="", direccion="", imagen_fundacion=None, descripcion="", activa=False)
+Fundacion.objects.create(nombre="Ecocitex", correo_contacto="", telefono="", direccion="", imagen_fundacion=None, descripcion="", activa=False)
+Fundacion.objects.create(nombre="Misión Talca", correo_contacto="", telefono="", direccion="", imagen_fundacion=None, descripcion="", activa=False)
+Fundacion.objects.create(nombre="Fundación Banco de Ropa", correo_contacto="", telefono="", direccion="", imagen_fundacion=None, descripcion="", activa=False)
+Fundacion.objects.create(nombre="Fundación Madre Josefa", correo_contacto="", telefono="", direccion="", imagen_fundacion=None, descripcion="", activa=False)
+Fundacion.objects.create(nombre="Fundación María Ayuda", correo_contacto="", telefono="", direccion="", imagen_fundacion=None, descripcion="", activa=False)
+Fundacion.objects.all()
+
+En caso de que se desea agregar imagen con shell
+# Tener lista la imagen
+from django.core.files import File
+with open('ruta/a/la/imagen.jpg', 'rb') as f:
+    Fundacion.objects.create(nombre="Tedoy Ropa", correo_contacto="", telefono="", direccion="", imagen_fundacion=File(f), descripcion="", activa=True)
+
+_________________________________________________________________________________________________________________
+
+Crear al super usuario (admin):
+python manage.py createsuperuser
+# Luego le definen sus credenciales, de esta forma ya se puede ingresar al Django Admin
+
+_________________________________________________________________________________________________________________
+
+Crear/Registrar Grupos/Roles:
+# Se puede tambien por PhpMyAdmin (lo encuentro mas facil y directo)
+from django.contrib.auth.models import Group, Permission
+# Crear grupos
+admin_group = Group.objects.get_or_create(name='Administrador')
+moderador_group = Group.objects.get_or_create(name='Moderador')
+representante_fundacion_group = Group.objects.get_or_create(name='Representante de Fundación')
+cliente_group = Group.objects.get_or_create(name='Cliente')
+
+Vincular permisos especificos de Fundacion (ejemplo con Fundacion, aplica lo mismo para las demas secciones)
+# Se puede tambien por PhpMyAdmin (lo encuentro mas facil y directo)
+from django.contrib.contenttypes.models import ContentType
+from A_EcoPrenda.models import Fundacion
+
+# Obtener el content type del modelo Fundacion
+fundacion_ct = ContentType.objects.get_for_model(Fundacion)
+
+# Obtener permisos
+add_perm = Permission.objects.get(codename='add_fundacion', content_type=fundacion_ct)
+change_perm = Permission.objects.get(codename='change_fundacion', content_type=fundacion_ct)
+delete_perm = Permission.objects.get(codename='delete_fundacion', content_type=fundacion_ct)
+
+# Asignar permisos al grupo (agregar si o si permisos)
+admin_group.permissions.add(add_perm, change_perm, delete_perm)
+moderador_group.permissions.add(change_perm)
+representante_fundacion_group.permissions.add()
+cliente_group.permissions.add(Permission.objects.get(codename='view_fundacion', content_type=fundacion_ct)
+)
+
+# Asignar usuarios a grupos
+from django.contrib.auth.models import User
+
+# Obtener usuario
+usuario = User.objects.get(username='kriss')
+
+# Asignar grupo
+usuario.groups.add(admin_group)
+
+# Verificar permisos
+usuario.has_perm('A_EcoPrenda.add_fundacion')  # True si tiene el permiso
+# Verificar si se puede usar "has_perm": Fundacion._meta.app_label
+
+# Ver todos los permisos
+from django.contrib.auth.models import Permission
+for perm in Permission.objects.all():
+    print(f"{perm.id}: {perm.content_type.app_label}.{perm.codename} — {perm.name}")
+
+# Asignar varios permisos
+permisos = Permission.objects.filter(content_type=fundacion_ct, codename__in=[
+    'add_fundacion', 'change_fundacion', 'delete_fundacion'
+])
+admin_group.permissions.add(*permisos)
+
+_________________________________________________________________________________________________________________
+
+En caso de que se desea realizar los grupos/permisos en PhpMyAdmin (SQL)
+# Copia y pega
+-- Cliente
+INSERT INTO auth_group_permissions (group_id, permission_id)
+SELECT g.id, p.id
+FROM auth_group g, auth_permission p
+WHERE g.name = 'Cliente' AND p.codename IN (
+  'view_prenda', 'view_transaccion', 'view_fundacion', 'add_mensaje', 'view_mensaje'
+);
+
+-- Representante de Fundación
+INSERT INTO auth_group_permissions (group_id, permission_id)
+SELECT g.id, p.id
+FROM auth_group g, auth_permission p
+WHERE g.name = 'Representante de Fundación' AND p.codename IN (
+  'view_prenda', 'view_transaccion', 'change_transaccion', 'view_fundacion', 'add_mensaje', 'view_mensaje'
+);
+
+-- Moderador
+INSERT INTO auth_group_permissions (group_id, permission_id)
+SELECT g.id, p.id
+FROM auth_group g, auth_permission p
+WHERE g.name = 'Moderador' AND p.codename IN (
+  'view_prenda', 'change_prenda', 'delete_prenda',
+  'view_transaccion', 'change_transaccion', 'delete_transaccion',
+  'view_fundacion', 'change_fundacion',
+  'view_mensaje', 'delete_mensaje',
+  'view_usuario'
+);
+
+-- Administrador (todos los permisos)
+INSERT INTO auth_group_permissions (group_id, permission_id)
+SELECT g.id, p.id
+FROM auth_group g, auth_permission p
+WHERE g.name = 'Administrador';
+
+Verificar
+SELECT * FROM auth_group_permissions WHERE group_id = 1;
+
+Observar a quienes se les asigno los permisos
+SELECT g.name AS grupo, p.codename AS permiso
+FROM auth_group_permissions gp
+JOIN auth_group g ON gp.group_id = g.id
+JOIN auth_permission p ON gp.permission_id = p.id
+ORDER BY g.name;

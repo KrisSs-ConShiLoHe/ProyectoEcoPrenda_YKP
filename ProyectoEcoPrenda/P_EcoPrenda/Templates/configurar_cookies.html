@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración de Cookies - EcoPrenda{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card shadow-lg">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">
+                            <i class="bi bi-cookie"></i> Política y Configuración de Cookies
+                        </h3>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            <strong>¿Qué son las cookies?</strong> Las cookies son pequeños archivos de texto que se almacenan en tu dispositivo cuando visitas un sitio web. Nos ayudan a mejorar tu experiencia y el funcionamiento del sitio.
+                        </div>
+
+                        <h5 class="mt-4"><i class="bi bi-list-check"></i> Tipos de Cookies que Utilizamos</h5>
+                        
+                        <!-- Cookies Esenciales -->
+                        <div class="card mb-3 border-success">
+                            <div class="card-header bg-success text-white">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-shield-fill-check"></i> Cookies Esenciales
+                                    </h6>
+                                    <span class="badge bg-light text-success">Siempre Activas</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Propósito:</strong> Necesarias para el funcionamiento básico del sitio web.</p>
+                                <ul>
+                                    <li><strong>Sesión (ecoprendas_sessionid):</strong> Mantiene tu sesión activa mientras navegas</li>
+                                    <li><strong>CSRF Token:</strong> Protege contra ataques de seguridad</li>
+                                    <li><strong>Preferencias de cookies:</strong> Recuerda tu elección sobre cookies</li>
+                                </ul>
+                                <p class="text-muted mb-0"><small><i class="bi bi-clock"></i> Duración: Varía según el tipo (sesión o hasta 1 año)</small></p>
+                            </div>
+                        </div>
+
+                        <!-- Cookies de Funcionalidad -->
+                        <div class="card mb-3 border-info">
+                            <div class="card-header bg-info text-white">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-toggles"></i> Cookies de Funcionalidad
+                                    </h6>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="config-funcionalidad" checked>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Propósito:</strong> Mejoran la funcionalidad y personalización del sitio.</p>
+                                <ul>
+                                    <li><strong>Tema preferido:</strong> Modo claro/oscuro</li>
+                                    <li><strong>Idioma:</strong> Tu idioma preferido</li>
+                                    <li><strong>"Recordarme":</strong> Mantiene tu sesión por más tiempo</li>
+                                    <li><strong>Filtros guardados:</strong> Tus últimas búsquedas</li>
+                                </ul>
+                                <p class="text-muted mb-0"><small><i class="bi bi-clock"></i> Duración: Hasta 1 año</small></p>
+                            </div>
+                        </div>
+
+                        <!-- Cookies Analíticas -->
+                        <div class="card mb-3 border-danger">
+                            <div class="card-header bg-danger text-white">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-graph-up"></i> Cookies Analíticas
+                                    </h6>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="config-analiticas" checked>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Propósito:</strong> Nos ayudan a entender cómo usas el sitio para mejorarlo.</p>
+                                <ul>
+                                    <li><strong>Google Analytics:</strong> Analiza el tráfico del sitio</li>
+                                    <li><strong>Páginas visitadas:</strong> Qué contenido es más popular</li>
+                                    <li><strong>Tiempo en sitio:</strong> Cuánto tiempo pasas en cada página</li>
+                                    <li><strong>Origen de visitas:</strong> Cómo llegaste al sitio</li>
+                                </ul>
+                                <p class="text-muted mb-0"><small><i class="bi bi-clock"></i> Duración: Hasta 2 años</small></p>
+                                <p class="text-muted"><small><i class="bi bi-shield"></i> Los datos se anonimizan y no te identifican personalmente</small></p>
+                            </div>
+                        </div>
+
+                        <!-- Cookies de Marketing -->
+                        <div class="card mb-3 border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-megaphone"></i> Cookies de Marketing
+                                    </h6>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="config-marketing">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Propósito:</strong> Personalizan los anuncios que ves en otros sitios.</p>
+                                <ul>
+                                    <li><strong>Facebook Pixel:</strong> Mide la efectividad de anuncios en Facebook</li>
+                                    <li><strong>Google Ads:</strong> Muestra anuncios relevantes</li>
+                                    <li><strong>Remarketing:</strong> Te muestra productos que viste anteriormente</li>
+                                </ul>
+                                <p class="text-muted mb-0"><small><i class="bi bi-clock"></i> Duración: Hasta 2 años</small></p>
+                            </div>
+                        </div>
+
+                        <!-- Botones de acción -->
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="button" class="btn btn-success btn-lg" id="guardar-preferencias">
+                                <i class="bi bi-check-circle"></i> Guardar mis Preferencias
+                            </button>
+                            <button type="button" class="btn btn-primary" id="aceptar-todas">
+                                <i class="bi bi-check-all"></i> Aceptar Todas las Cookies
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="rechazar-todas">
+                                <i class="bi bi-x-circle"></i> Solo Cookies Esenciales
+                            </button>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h5><i class="bi bi-question-circle"></i> Preguntas Frecuentes</h5>
+                        
+                        <div class="accordion" id="faqAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                        ¿Qué pasa si rechazo las cookies?
+                                    </button>
+                                </h2>
+                                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        Si rechazas las cookies no esenciales, podrás seguir usando el sitio, pero algunas funcionalidades pueden estar limitadas. Por ejemplo, no podremos recordar tus preferencias entre sesiones.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                        ¿Puedo cambiar mis preferencias después?
+                                    </button>
+                                </h2>
+                                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        Sí, puedes cambiar tus preferencias en cualquier momento. Encuentra el enlace "Configurar Cookies" en el pie de página del sitio.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                        ¿Cómo puedo eliminar las cookies?
+                                    </button>
+                                </h2>
+                                <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        Puedes eliminar las cookies desde la configuración de tu navegador. También puedes usar el botón "Eliminar Cookies" en tu perfil de usuario.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('guardar-preferencias').addEventListener('click', function() {
+    const preferencias = {
+        funcionalidad: document.getElementById('config-funcionalidad').checked,
+        analiticas: document.getElementById('config-analiticas').checked,
+        marketing: document.getElementById('config-marketing').checked
+    };
+    
+    fetch('/aceptar-cookies/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(preferencias)
+    })
+    .then(response => {
+        if (response.ok) {
+            alert('Preferencias guardadas correctamente :V');
+            window.location.href = '/';
+        }
+    });
+});
+
+document.getElementById('aceptar-todas').addEventListener('click', function() {
+    document.getElementById('config-funcionalidad').checked = true;
+    document.getElementById('config-analiticas').checked = true;
+    document.getElementById('config-marketing').checked = true;
+    document.getElementById('guardar-preferencias').click();
+});
+
+document.getElementById('rechazar-todas').addEventListener('click', function() {
+    fetch('/rechazar-cookies/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            alert('Solo se usarán cookies esenciales >:V');
+            window.location.href = '/';
+        }
+    });
+});
+</script>
+{% endblock %}

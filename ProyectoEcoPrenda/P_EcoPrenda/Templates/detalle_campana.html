@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalle de la Campaña - EcoPrenda{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card mb-4 shadow-lg">
+                {% if campana.imagen_campana %}
+                            <img src="{{ campana.imagen_campana.url }}" class="card-img-top" alt="Imagen campaña">
+                        {% else %}
+                            <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted" style="height: 200px;">
+                                <span>Sin imagen</span>
+                            </div>
+                        {% endif %}
+                <div class="card-body">
+                    <h2 class="card-title mb-2">
+                        <i class="bi bi-megaphone"></i> {{ campana.nombre }}
+                    </h2>
+                    <p class="mb-1"><i class="bi bi-house-heart"></i> Fundación:
+                        <strong>{{ campana.fundacion_nombre }}</strong>
+                    </p>
+                    <p class="mb-1">
+                        <i class="bi bi-calendar-event"></i>
+                        {{ campana.fecha_inicio|date:"d/m/Y" }} - {{ campana.fecha_fin|date:"d/m/Y" }}
+                    </p>
+                    <p class="mb-3">{{ campana.descripcion }}</p>
+
+                    <div class="mb-2">
+                        <strong>Categorías solicitadas:</strong>
+                        <span class="badge bg-primary">{{ campana.categorias_solicitadas }}</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Meta de prendas:</strong>
+                        <span>{{ campana.objetivo_prendas }}</span>
+                        <br>
+                        <strong>Prendas donadas:</strong>
+                        <span>{{ avance }}/{{ campana.objetivo_prendas }}</span>
+                        <div class="mt-2">
+                            <progress class="w-100" style="height: 22px;" value="{{ avance }}" max="{{ campana.objetivo_prendas }}"></progress>
+                            <div class="text-center mt-1">{{ porcentaje_avance }}%</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'donar_a_campana' campana.id_campana %}" class="btn btn-success w-100 fw-bold mt-3">
+                        <i class="bi bi-gift"></i> Donar Prenda a esta Campaña
+                    </a>
+                </div>
+            </div>
+            <div class="card mt-3">
+                <div class="card-header">
+                    <i class="bi bi-list-ul"></i> Prendas donadas a esta campaña
+                </div>
+                <div class="card-body">
+                    {% if donaciones %}
+                        <ul class="list-group">
+                            {% for don in donaciones %}
+                                <li class="list-group-item">
+                                    <strong>{{ don.id_prenda.nombre }}</strong>
+                                    <span class="text-muted">por {{ don.id_usuario_origen.nombre }}</span>
+                                    <span class="float-end"><i class="bi bi-calendar-check"></i> {{ don.fecha_transaccion|date:"d/m/Y" }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="alert alert-info mt-2 mb-0 text-center">
+                            Todavía no hay donaciones hechas a esta campaña.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="mt-3 text-center">
+                <a href="{% url 'campanas_solidarias' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver a Campañas
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

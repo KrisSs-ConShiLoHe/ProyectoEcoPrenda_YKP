@@ -1,0 +1,50 @@
+.hero-section {
+    background: linear-gradient(135deg, #783fb9, #783fb9);
+    color: #F7F9FA;
+}
+
+.hero-title {
+    color: #ffffff;
+}
+
+.hero-subtitle {
+    color: #ffffff;
+    font-size: 1.15rem;
+}
+
+.hero-icons i {
+    transition: transform 0.3s ease;
+}
+.hero-icons i:hover {
+    transform: scale(1.15);
+}
+
+/* Estadísticas */
+.stats-section {
+    background-color: #F0EDE5;
+}
+.stat-card {
+    border-radius: 1rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.stat-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 20px rgba(151, 156, 156, 0.795);
+}
+
+/* Features */
+.feature-card {
+    border-radius: 1rem;
+    border: none;
+    box-shadow: 0 2px 12px rgba(199, 198, 192, 0.911);
+    transition: all 0.3s ease;
+}
+.feature-card:hover {
+    box-shadow: 0 8px 24px rgba(221, 224, 218, 0.788);
+    transform: translateY(-6px);
+}
+
+/* Impact Banner */
+.impact-banner {
+    background: linear-gradient(135deg, #c570f7, #7e57eb);
+}

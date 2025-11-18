@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Consentimiento de Cookies Requerido - EcoPrenda{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow-lg border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0">
+                            <i class="bi bi-exclamation-triangle"></i> Configuración de Cookies Requerida
+                        </h4>
+                    </div>
+                    <div class="card-body p-5 text-center">
+                        <i class="bi bi-shield-lock display-1 text-warning mb-4"></i>
+                        
+                        <h3 class="mb-3">Debes configurar las cookies para continuar</h3>
+                        
+                        <div class="alert alert-info text-start">
+                            <i class="bi bi-info-circle"></i> 
+                            {{ message|default:"Para usar esta funcionalidad, necesitas aceptar al menos las cookies esenciales." }}
+                        </div>
+                        
+                        <div class="card mb-4 text-start">
+                            <div class="card-body">
+                                <h5><i class="bi bi-question-circle"></i> ¿Por qué es necesario?</h5>
+                                <ul>
+                                    <li><strong>Inicio de Sesión:</strong> Requiere cookies esenciales para mantener tu sesión activa y segura.</li>
+                                    <li><strong>Registro:</strong> Necesario para crear y verificar tu cuenta.</li>
+                                    <li><strong>Transacciones:</strong> Cookies esenciales protegen tus operaciones.</li>
+                                    <li><strong>Seguridad:</strong> Las cookies CSRF protegen contra ataques.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-3">
+                            <a href="/configurar-cookies/" class="btn btn-warning btn-lg">
+                                <i class="bi bi-gear"></i> Configurar Cookies Ahora
+                            </a>
+                            <a href="/" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Volver al Inicio
+                            </a>
+                        </div>
+                        
+                        <p class="text-muted mt-4 mb-0">
+                            <small>
+                                <i class="bi bi-shield-check"></i> 
+                                Respetamos tu privacidad. Puedes elegir qué cookies aceptar.
+                            </small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

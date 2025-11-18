@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Donar Prenda - EcoPrenda{% endblock %}
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h2 class="mb-4"><i class="bi bi-heart-fill text-danger"></i> Donar Prenda</h2>
+                        <div class="card mb-4 bg-light">
+                            <div class="card-body">
+                                <!-- Imagen de la prenda -->
+                                <div class="mb-3">
+                                    {% if prenda.imagen_prenda %}
+                                        <img src="{{ prenda.imagen_prenda.url }}" alt="Imagen de {{ prenda.nombre }}" class="img-fluid rounded border w-100" style="max-height: 350px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="d-flex align-items-center justify-content-center bg-white border rounded" style="height: 250px;">
+                                            <span class="text-muted">Sin imagen</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <h5>{{ prenda.nombre }}</h5>
+                                <p class="text-muted">{{ prenda.descripcion }}</p>
+                            </div>
+                        </div>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="fundacion" class="form-label">Selecciona una fundación *</label>
+                                <select name="fundacion" required>
+                                    {% for f in fundaciones %}
+                                        <option value="{{ f.id_fundacion }}">{{ f.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="alert alert-success">
+                                <i class="bi bi-leaf text-success"></i> <strong>Impacto:</strong> Al donar esta prenda contribuirás a reducir aproximadamente <strong>5.5 kg de CO₂</strong>.
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-danger btn-lg"><i class="bi bi-heart-fill"></i> Confirmar Donación</button>
+                                <a href="{% url 'detalle_prenda' prenda.id_prenda %}" class="btn btn-outline-secondary">Cancelar</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Campaña - {{ fundacion.nombre }} - EcoPrenda{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4 text-center">
+        <i class="bi bi-megaphone"></i> Crear Nueva Campaña Solidaria
+    </h2>
+    <div class="card mx-auto" style="max-width: 600px;">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="nombre" class="form-label">Nombre de la campaña</label>
+                    <input type="text" class="form-control" id="nombre" name="nombre" required maxlength="200" value="{{ request.POST.nombre }}">
+                </div>
+                <div class="mb-3">
+                    <label for="descripcion" class="form-label">Descripción</label>
+                    <textarea class="form-control" id="descripcion" name="descripcion" rows="4" maxlength="500" required>{{ request.POST.descripcion }}</textarea>
+                </div>
+                <!-- Imagen de la prenda -->
+                <div class="mb-3">
+                    <label for="imagen_campana" class="form-label">Imagen de la campaña</label>
+                    <input class="form-control" type="file" id="imagen_campana" name="imagen_campana" accept="image/*">
+                    <div class="form-text">Formatos permitidos: JPG, PNG, GIF. Tamaño máx. 10MB</div>
+                </div>
+
+                <!-- Previsualización -->
+                <div class="mb-3">
+                        <div id="preview-placeholder" class="d-flex align-items-center justify-content-center bg-light border rounded" style="height: 200px;">
+                        <span class="text-muted">Sin imagen</span>
+                    </div>
+                    <img id="preview-imagen" src="" alt="Previsualización" class="img-fluid rounded border d-none mt-2">
+                </div>
+                <div class="mb-3">
+                    <label for="fecha_inicio" class="form-label">Fecha de inicio</label>
+                    <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required value="{{ request.POST.fecha_inicio }}">
+                </div>
+                <div class="mb-3">
+                    <label for="fecha_fin" class="form-label">Fecha de fin</label>
+                    <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required value="{{ request.POST.fecha_fin }}">
+                </div>
+                <div class="mb-3">
+                    <label for="objetivo_prendas" class="form-label">Objetivo de prendas</label>
+                    <input type="number" class="form-control" id="objetivo_prendas" name="objetivo_prendas" min="1" required value="{{ request.POST.objetivo_prendas }}">
+                </div>
+                <div class="mb-3">
+                    <label for="categorias_solicitadas" class="form-label">Categorías solicitadas (separadas por coma)</label>
+                    <input type="text" class="form-control" id="categorias_solicitadas" name="categorias_solicitadas" maxlength="300" value="{{ request.POST.categorias_solicitadas }}">
+                </div>
+                <button type="submit" class="btn btn-success w-100">Crear Campaña</button>
+            </form>
+        </div>
+    </div>
+    <div class="mt-3 text-center">
+        <a href="{% url 'mis_campanas' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a Mis Campañas
+        </a>
+    </div>
+</div>
+{% endblock %}

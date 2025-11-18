@@ -1,0 +1,198 @@
+:root {
+    --primary-color: #2725a7; 
+    --secondary-color: #2725a7; 
+    --accent-color: #993fe2; 
+    --light-bg: #f8f9f5; 
+    --dark-color: #2d2d2d;
+    --text-muted: #757575;
+    --radius: 12px;
+    --transition: 0.3s ease-in-out;
+}
+
+/* -------------------------- BASE --------------------------- */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--light-bg);
+    color: var(--dark-color);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* -------------------------- NAVBAR --------------------------- */
+.navbar {
+    background-color: var(--primary-color) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.7rem;
+    letter-spacing: 1px;
+    color: #ffffff !important;
+}
+
+.nav-link {
+    color: #fdfbfb !important;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.nav-link:hover {
+    color: var(--accent-color) !important;
+}
+
+/* -------------------------- BOTONES --------------------------- */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    border-radius: var(--radius);
+    transition: var(--transition);
+}
+
+.btn-primary:hover {
+    background-color: #73f8d7; /* Verde medio más cálido */
+    border-color: #a5ddc3;
+    transform: translateY(-2px);
+}
+
+.btn-light {
+    border-radius: var(--radius);
+}
+
+/* -------------------------- TARJETAS --------------------------- */
+.card {
+    border: none;
+    border-radius: var(--radius);
+    background-color: #fff;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.06);
+    transition: var(--transition);
+}
+
+.card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+.card img {
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
+}
+
+.badge-eco {
+    background-color: var(--primary-color);
+    color: #fff;
+    font-weight: 500;
+    border-radius: var(--radius);
+}
+
+/* -------------------------- FOOTER --------------------------- */
+footer {
+    margin-top: auto;
+    background-color: var(--primary-color);
+    color: #fdfdfd;
+    padding: 2.5rem 0;
+    font-size: 0.95rem;
+}
+
+footer h5 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+footer a {
+    color: #f1f1f1;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+footer a:hover {
+    color: var(--accent-color);
+}
+
+footer hr {
+    opacity: 0.3;
+}
+
+/* -------------------------- COOKIES --------------------------- */
+.cookie-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 3px solid var(--primary-color);
+    color: var(--dark-color);
+    padding: 1.5rem;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+    z-index: 9999;
+    animation: slideUp 0.5s ease-out;
+}
+
+.cookie-banner-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+}
+
+.cookie-banner-text h5 {
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.cookie-banner-text p {
+    margin-bottom: 0;
+    color: var(--text-muted);
+}
+
+.cookie-banner-buttons {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.cookie-banner-buttons .btn {
+    border-radius: var(--radius);
+}
+
+.btn-accept {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-reject {
+    background-color: #e6e6e6;
+    color: var(--dark-color);
+}
+
+.btn-accept:hover {
+    background-color: #01fd1a;
+}
+
+.btn-reject:hover {
+    background-color: #ccc;
+}
+
+/* -------------------------- ANIMACIONES --------------------------- */
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+/* -------------------------- RESPONSIVE --------------------------- */
+@media (max-width: 768px) {
+    .cookie-banner-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    .cookie-banner-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+    .cookie-banner-buttons .btn {
+        width: 100%;
+    }
+}
