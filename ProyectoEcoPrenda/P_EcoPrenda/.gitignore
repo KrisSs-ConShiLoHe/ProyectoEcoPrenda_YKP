@@ -1,0 +1,3 @@
+# Archivos ignorados por Git
+.env
+# ... otras entradas
