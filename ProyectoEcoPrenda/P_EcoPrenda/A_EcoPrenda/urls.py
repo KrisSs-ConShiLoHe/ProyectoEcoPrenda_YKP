@@ -85,4 +85,9 @@ urlpatterns = [
     path('session-info/', views.session_info, name='session_info'),
     path('session-status/', views.session_status, name='session_status'),
     path('renovar-sesion/', views.renovar_sesion, name='renovar_sesion'),
+
+    # Mapa interactivo
+    path('mapa/', views.mapa_fundaciones, name='mapa_fundaciones'),
+    path('perfil/actualizar-ubicacion/', views.actualizar_ubicacion_usuario, name='actualizar_ubicacion_usuario'),
+    path('fundacion/<int:id_fundacion>/actualizar-ubicacion/', views.actualizar_ubicacion_fundacion, name='actualizar_ubicacion_fundacion'),
 ]

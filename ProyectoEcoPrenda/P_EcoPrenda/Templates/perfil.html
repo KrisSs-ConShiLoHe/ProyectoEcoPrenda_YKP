@@ -122,3 +122,111 @@
     </div>
 </section>
 {% endblock %}
+
+<!-- ============================================================================== -->
+<!-- AGREGAR ESTA SECCIÓN EN perfil.html - Configuración de Ubicación en Mapa -->
+<!-- ============================================================================== -->
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-map"></i> Configuración de Ubicación en Mapa
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{% url 'actualizar_ubicacion_usuario' %}">
+            {% csrf_token %}
+            
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>¿Para qué sirve esto?</strong>
+                <p class="mb-0 small">
+                    Permite que otros usuarios y fundaciones vean tu ubicación aproximada en el mapa público.
+                    Esto facilita el intercambio, venta o donación de prendas cerca de ti.
+                </p>
+            </div>
+            
+            <!-- Dirección -->
+            <div class="mb-3">
+                <label for="direccion" class="form-label">
+                    <i class="bi bi-geo-alt"></i> Dirección Completa
+                </label>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    id="direccion" 
+                    name="direccion" 
+                    value="{{ usuario.direccion }}"
+                    placeholder="Ej: Av. Providencia 1234, Santiago, Chile"
+                    required
+                >
+                <small class="text-muted">
+                    Ingresa tu dirección completa. Se geocodificará automáticamente.
+                </small>
+            </div>
+            
+            <!-- Coordenadas Actuales (solo lectura) -->
+            {% if usuario.lat and usuario.lng %}
+            <div class="mb-3">
+                <label class="form-label">
+                    <i class="bi bi-crosshair"></i> Coordenadas Actuales
+                </label>
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        value="Lat: {{ usuario.lat }}, Lng: {{ usuario.lng }}"
+                        readonly
+                    >
+                    <a 
+                        href="https://www.google.com/maps?q={{ usuario.lat }},{{ usuario.lng }}" 
+                        target="_blank" 
+                        class="btn btn-outline-secondary"
+                    >
+                        <i class="bi bi-box-arrow-up-right"></i> Ver en Google Maps
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Checkbox de Privacidad -->
+            <div class="form-check form-switch mb-3">
+                <input 
+                    class="form-check-input" 
+                    type="checkbox" 
+                    id="mostrar_en_mapa" 
+                    name="mostrar_en_mapa"
+                    {% if usuario.mostrar_en_mapa %}checked{% endif %}
+                >
+                <label class="form-check-label" for="mostrar_en_mapa">
+                    <strong>Mostrar mi ubicación en el mapa público</strong>
+                    <br>
+                    <small class="text-muted">
+                        Si está activado, otros usuarios podrán ver tu ubicación aproximada en el mapa.
+                        Puedes desactivarlo en cualquier momento.
+                    </small>
+                </label>
+            </div>
+            
+            <!-- Estado Actual -->
+            <div class="alert {% if usuario.mostrar_en_mapa %}alert-success{% else %}alert-warning{% endif %}">
+                <i class="bi {% if usuario.mostrar_en_mapa %}bi-eye{% else %}bi-eye-slash{% endif %}"></i>
+                {% if usuario.mostrar_en_mapa %}
+                    Tu ubicación está <strong>visible</strong> en el mapa público.
+                {% else %}
+                    Tu ubicación está <strong>oculta</strong> del mapa público.
+                {% endif %}
+            </div>
+            
+            <!-- Botones -->
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Guardar Ubicación
+                </button>
+                <a href="{% url 'mapa_fundaciones' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-map"></i> Ver Mapa Completo
+                </a>
+            </div>
+        </form>
+    </div>
+</div>

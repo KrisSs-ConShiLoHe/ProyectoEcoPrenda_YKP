@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mapa de Fundaciones - EcoPrenda{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="{% static 'css/mapa_fundaciones.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="map-header">
+    <div class="container">
+        <h1 class="display-4 text-center mb-3">
+            <i class="bi bi-map"></i> Mapa de Fundaciones
+        </h1>
+        <p class="lead text-center">
+            Encuentra fundaciones cercanas y usuarios que participan en la economía circular
+        </p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row">
+        <!-- Columna del Mapa -->
+        <div class="col-lg-9 mb-4">
+            <!-- Estadísticas Rápidas -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="map-stats">
+                        <h5><i class="bi bi-building text-success"></i> {{ total_fundaciones }} Fundaciones</h5>
+                        <p class="text-muted mb-0">Registradas y activas en el mapa</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="map-stats">
+                        <h5><i class="bi bi-people text-primary"></i> {{ total_usuarios_visibles }} Usuarios Visibles</h5>
+                        <p class="text-muted mb-0">Compartiendo su ubicación</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mapa -->
+            <div id="map"></div>
+        </div>
+        
+        <!-- Columna de Leyenda e Información -->
+        <div class="col-lg-3">
+            <!-- Leyenda -->
+            <div class="legend mb-4">
+                <h5 class="mb-3"><i class="bi bi-info-circle"></i> Leyenda</h5>
+                
+                <div class="legend-item">
+                    <div class="legend-icon">
+                        <i class="bi bi-geo-alt-fill text-success"></i>
+                    </div>
+                    <div>
+                        <strong>Fundaciones</strong>
+                        <p class="text-muted small mb-0">Organizaciones verificadas</p>
+                    </div>
+                </div>
+                
+                <div class="legend-item">
+                    <div class="legend-icon">
+                        <i class="bi bi-person-fill text-primary"></i>
+                    </div>
+                    <div>
+                        <strong>Usuarios</strong>
+                        <p class="text-muted small mb-0">Personas compartiendo ubicación</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panel de Información -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-shield-check text-success"></i> Privacidad
+                    </h5>
+                    <p class="card-text small text-muted">
+                        Tu ubicación solo se muestra si activas la opción "Mostrar en mapa" en tu perfil.
+                    </p>
+                    
+                    {% if usuario %}
+                        {% if usuario.mostrar_en_mapa %}
+                            <div class="alert alert-success small mb-0">
+                                <i class="bi bi-check-circle"></i> Tu ubicación es visible
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning small mb-0">
+                                <i class="bi bi-eye-slash"></i> Tu ubicación está oculta
+                            </div>
+                        {% endif %}
+                        
+                        <a href="{% url 'perfil' %}" class="btn btn-sm btn-primary w-100 mt-3">
+                            <i class="bi bi-gear"></i> Configurar Ubicación
+                        </a>
+                    {% else %}
+                        <a href="{% url 'registro' %}" class="btn btn-sm btn-primary w-100">
+                            <i class="bi bi-person-plus"></i> Únete Ahora
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Ayuda -->
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-question-circle"></i> ¿Cómo usar el mapa?
+                    </h6>
+                    <ul class="small text-muted mb-0">
+                        <li>Haz clic en los marcadores para ver información</li>
+                        <li>Usa los controles para acercar/alejar</li>
+                        <li>Arrastra el mapa para explorar</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // Datos desde Django
+    const fundaciones = {{ fundaciones_json|safe }};
+    const usuarios = {{ usuarios_json|safe }};
+    const centroLat = {{ centro_lat }};
+    const centroLng = {{ centro_lng }};
+    const apiKey = '{{ geoapify_api_key }}';
+    
+    // Inicializar el mapa
+    const map = L.map('map').setView([centroLat, centroLng], 12);
+    
+    // Agregar capa de mapa de Geoapify
+    L.tileLayer(`https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${apiKey}`, {
+        attribution: '© <a href="https://www.geoapify.com/">Geoapify</a> | © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 20,
+    }).addTo(map);
+    
+    // Icono personalizado para fundaciones (verde)
+    const iconoFundacion = L.divIcon({
+        html: '<i class="bi bi-geo-alt-fill text-success" style="font-size: 32px;"></i>',
+        className: 'custom-marker',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+    });
+    
+    // Icono personalizado para usuarios (azul)
+    const iconoUsuario = L.divIcon({
+        html: '<i class="bi bi-person-fill text-primary" style="font-size: 28px;"></i>',
+        className: 'custom-marker',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        popupAnchor: [0, -28]
+    });
+    
+    // Agregar marcadores de fundaciones
+    fundaciones.forEach(fundacion => {
+        const marker = L.marker([fundacion.lat, fundacion.lng], { icon: iconoFundacion }).addTo(map);
+        
+        const popupContent = `
+            <div class="marker-info">
+                <h6><i class="bi bi-building text-success"></i> ${fundacion.nombre}</h6>
+                <p class="small mb-1"><i class="bi bi-geo-alt"></i> ${fundacion.direccion || 'Sin dirección'}</p>
+                ${fundacion.telefono ? `<p class="small mb-1"><i class="bi bi-telephone"></i> ${fundacion.telefono}</p>` : ''}
+                ${fundacion.correo_contacto ? `<p class="small mb-1"><i class="bi bi-envelope"></i> ${fundacion.correo_contacto}</p>` : ''}
+                <a href="/fundacion/${fundacion.id_fundacion}/" class="btn btn-sm btn-success w-100 mt-2">
+                    <i class="bi bi-eye"></i> Ver Fundación
+                </a>
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+    });
+    
+    // Agregar marcadores de usuarios
+    usuarios.forEach(usuario => {
+        const marker = L.marker([usuario.lat, usuario.lng], { icon: iconoUsuario }).addTo(map);
+        
+        const popupContent = `
+            <div class="marker-info">
+                <h6><i class="bi bi-person text-primary"></i> ${usuario.nombre}</h6>
+                <p class="small mb-1"><i class="bi bi-geo-alt"></i> ${usuario.comuna || 'Chile'}</p>
+                <p class="text-muted small mb-0">Usuario colaborador de EcoPrenda</p>
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+    });
+    
+    // Si no hay marcadores, mostrar mensaje
+    if (fundaciones.length === 0 && usuarios.length === 0) {
+        L.popup()
+            .setLatLng([centroLat, centroLng])
+            .setContent('<div class="text-center"><i class="bi bi-info-circle"></i><br>No hay fundaciones ni usuarios visibles en esta área</div>')
+            .openOn(map);
+    }
+    
+    // Ajustar el zoom para mostrar todos los marcadores
+    if (fundaciones.length > 0 || usuarios.length > 0) {
+        const group = new L.featureGroup();
+        
+        fundaciones.forEach(f => {
+            L.marker([f.lat, f.lng]).addTo(group);
+        });
+        
+        usuarios.forEach(u => {
+            L.marker([u.lat, u.lng]).addTo(group);
+        });
+        
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+</script>
+{% endblock %}

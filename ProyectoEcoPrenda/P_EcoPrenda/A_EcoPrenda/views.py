@@ -21,6 +21,7 @@ from .decorators import (
     cliente_only,
     role_required,
 )
+from django.conf import settings
 
 # ------------------------------------------------------------------------------------------------------------------
 # Utilidades de usuario y autenticación
@@ -1629,3 +1630,155 @@ def estadisticas_donaciones(request):
         'total_prendas': prendas.count()
     }
     return render(request, 'estadisticas_donaciones.html', context)
+
+# ==============================================================================
+# VISTA DEL MAPA INTERACTIVO - Agregar a views.py
+# ==============================================================================
+
+def mapa_fundaciones(request):
+    """
+    Mapa interactivo que muestra:
+    - Todas las fundaciones activas (SIEMPRE visibles)
+    - Usuarios que han activado "mostrar_en_mapa" (OPCIONAL)
+    
+    Usa Geoapify + Leaflet.js para renderizar el mapa.
+    """
+    usuario = get_usuario_actual(request)
+    
+    # Obtener todas las fundaciones activas con coordenadas válidas
+    fundaciones = Fundacion.objects.filter(
+        activa=True,
+        lat__isnull=False,
+        lng__isnull=False
+    ).values('id_fundacion', 'nombre', 'direccion', 'lat', 'lng', 'telefono', 'correo_contacto')
+    
+    # Obtener usuarios que aceptaron mostrar su ubicación
+    usuarios_visibles = Usuario.objects.filter(
+        mostrar_en_mapa=True,
+        lat__isnull=False,
+        lng__isnull=False
+    ).values('id_usuario', 'nombre', 'comuna', 'lat', 'lng')
+    
+    # Convertir QuerySets a listas para JSON
+    fundaciones_list = list(fundaciones)
+    usuarios_list = list(usuarios_visibles)
+    
+    # Centro del mapa (Santiago, Chile por defecto)
+    centro_lat = -33.4489
+    centro_lng = -70.6693
+    
+    # Si hay fundaciones, centrar en la primera
+    if fundaciones_list:
+        centro_lat = fundaciones_list[0]['lat']
+        centro_lng = fundaciones_list[0]['lng']
+    
+    context = {
+        'usuario': usuario,
+        'fundaciones_json': json.dumps(fundaciones_list),
+        'usuarios_json': json.dumps(usuarios_list),
+        'centro_lat': centro_lat,
+        'centro_lng': centro_lng,
+        'geoapify_api_key': settings.GEOAPIFY_API_KEY,
+        'total_fundaciones': len(fundaciones_list),
+        'total_usuarios_visibles': len(usuarios_list),
+    }
+    
+    return render(request, 'mapa_fundaciones.html', context)
+
+
+@login_required_custom
+def actualizar_ubicacion_usuario(request):
+    """
+    Permite al usuario actualizar su ubicación en el mapa.
+    Usa geocodificación de Geoapify para convertir dirección en coordenadas.
+    """
+    usuario = get_usuario_actual(request)
+    
+    if request.method == 'POST':
+        direccion = request.POST.get('direccion')
+        mostrar_en_mapa = request.POST.get('mostrar_en_mapa') == 'on'
+        
+        if not direccion:
+            messages.error(request, 'Debes ingresar una dirección.')
+            return redirect('perfil')
+        
+        # Geocodificar dirección usando Geoapify
+        import requests
+        
+        geocode_url = f"https://api.geoapify.com/v1/geocode/search"
+        params = {
+            'text': direccion,
+            'apiKey': settings.GEOAPIFY_API_KEY,
+            'limit': 1
+        }
+        
+        try:
+            response = requests.get(geocode_url, params=params)
+            data = response.json()
+            
+            if data.get('features') and len(data['features']) > 0:
+                coords = data['features'][0]['geometry']['coordinates']
+                lng, lat = coords[0], coords[1]
+                
+                # Actualizar usuario
+                usuario.direccion = direccion
+                usuario.lat = lat
+                usuario.lng = lng
+                usuario.mostrar_en_mapa = mostrar_en_mapa
+                usuario.save()
+                
+                messages.success(request, f'Ubicación actualizada: {direccion}')
+            else:
+                messages.error(request, 'No se pudo encontrar la dirección. Intenta con una más específica.')
+        
+        except Exception as e:
+            messages.error(request, f'Error al geocodificar: {str(e)}')
+    
+    return redirect('perfil')
+
+
+@admin_required
+def actualizar_ubicacion_fundacion(request, id_fundacion):
+    """
+    Permite a administradores actualizar la ubicación de una fundación.
+    """
+    fundacion = get_object_or_404(Fundacion, id_fundacion=id_fundacion)
+    
+    if request.method == 'POST':
+        direccion = request.POST.get('direccion')
+        
+        if not direccion:
+            messages.error(request, 'Debes ingresar una dirección.')
+            return redirect('detalle_fundacion', id_fundacion=id_fundacion)
+        
+        # Geocodificar dirección
+        import requests
+        
+        geocode_url = f"https://api.geoapify.com/v1/geocode/search"
+        params = {
+            'text': direccion,
+            'apiKey': settings.GEOAPIFY_API_KEY,
+            'limit': 1
+        }
+        
+        try:
+            response = requests.get(geocode_url, params=params)
+            data = response.json()
+            
+            if data.get('features') and len(data['features']) > 0:
+                coords = data['features'][0]['geometry']['coordinates']
+                lng, lat = coords[0], coords[1]
+                
+                fundacion.direccion = direccion
+                fundacion.lat = lat
+                fundacion.lng = lng
+                fundacion.save()
+                
+                messages.success(request, f'Ubicación de fundación actualizada: {direccion}')
+            else:
+                messages.error(request, 'No se pudo encontrar la dirección.')
+        
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+    
+    return redirect('detalle_fundacion', id_fundacion=id_fundacion)

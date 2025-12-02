@@ -40,6 +40,31 @@ class Usuario(models.Model):
     )
     es_staff = models.BooleanField(default=False, help_text='Puede acceder al panel de administración')
 
+    # NUEVOS CAMPOS PARA MAPA
+    direccion = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True,
+        help_text='Dirección completa del usuario'
+    )
+
+    lat = models.FloatField(
+        blank=True, 
+        null=True,
+        help_text='Latitud para ubicación en mapa'
+    )
+
+    lng = models.FloatField(
+        blank=True, 
+        null=True,
+        help_text='Longitud para ubicación en mapa'
+    )
+
+    mostrar_en_mapa = models.BooleanField(
+        default=False,
+        help_text='¿Permitir que mi ubicación sea visible en el mapa público?'
+    )
+
     class Meta:
         db_table = 'usuario'
 
@@ -91,6 +116,19 @@ class Fundacion(models.Model):
     descripcion = models.TextField(blank=True, null=True)
     activa = models.BooleanField(default=True)
     representante = models.OneToOneField(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='fundacion_representada')
+
+    # NUEVOS CAMPOS PARA MAPA
+    lat = models.FloatField(
+        blank=True, 
+        null=True,
+        help_text='Latitud de la fundación (OBLIGATORIO para aparecer en mapa)'
+    )
+
+    lng = models.FloatField(
+        blank=True, 
+        null=True,
+        help_text='Longitud de la fundación (OBLIGATORIO para aparecer en mapa)'
+    )
 
     class Meta:
         db_table = 'fundacion'
@@ -209,6 +247,52 @@ class Transaccion(models.Model):
     razon_disputa = models.TextField(null=True, blank=True)
     reportado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='disputas_reportadas')
     fecha_disputa = models.DateTimeField(null=True, blank=True)
+
+    # NUEVOS CAMPOS PARA LOGÍSTICA Y ENVÍOS
+    direccion_retiro = models.CharField(
+        max_length=300, 
+        blank=True, 
+        null=True,
+        help_text='Dirección de retiro/origen para envío'
+    )
+    direccion_entrega = models.CharField(
+        max_length=300, 
+        blank=True, 
+        null=True,
+        help_text='Dirección de entrega/destino para envío'
+    )
+    peso_kg = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        blank=True, 
+        null=True,
+        help_text='Peso estimado de la prenda en kilogramos'
+    )
+    dimensiones = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True,
+        help_text='Dimensiones del paquete (largo x ancho x alto en cm)'
+    )
+    codigo_seguimiento_envio = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True,
+        help_text='Código de seguimiento del envío (Shipit u otro)'
+    )
+    costo_envio = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        blank=True, 
+        null=True,
+        help_text='Costo del envío calculado'
+    )
+    courier = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True,
+        help_text='Nombre del courier (ej: Chilexpress, Correos, etc.)'
+    )
 
     class Meta:
         db_table = 'transaccion'
