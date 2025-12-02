@@ -104,7 +104,7 @@ DATABASES['mysql_db'] = dj_database_url.config(
     conn_max_age=600
 )
 
-DATABASE_ROUTERS = ['P_EcoPrenda.db_routers.InventarioRouter']
+DATABASE_ROUTERS = ['P_EcoPrenda.db_routers.AppRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
