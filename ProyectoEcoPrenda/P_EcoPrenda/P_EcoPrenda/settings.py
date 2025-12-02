@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import dj_database_url
 from dotenv import load_dotenv
 import pymysql
 pymysql.install_as_MySQLdb()
@@ -89,18 +90,21 @@ WSGI_APPLICATION = 'P_EcoPrenda.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+# PostgreSQL (Principal)
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DB_URL'),
+        conn_max_age=600 # Opcional: para persistencia de conexión
+    )
 }
 
+# MySQL (Secundaria)
+DATABASES['mysql_db'] = dj_database_url.config(
+    default=os.environ.get('MYSQL_ADDON_URI'),
+    conn_max_age=600
+)
+
+DATABASE_ROUTERS = ['P_EcoPrenda.db_routers.InventarioRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
