@@ -31,7 +31,7 @@ SECRET_KEY = 'django-insecure-!vv=3%%p7%(h*-3o2to1sc@s1&u2v0^-e!-bl-87g+npg5)xyb
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['','127.0.0.1','localhost','proyectoecoprenda-ykp.onrender.com']
+ALLOWED_HOSTS = ['192.168.1.87','127.0.0.1','localhost','proyectoecoprenda-ykp.onrender.com']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://proyectoecoprenda-ykp.onrender.com'
