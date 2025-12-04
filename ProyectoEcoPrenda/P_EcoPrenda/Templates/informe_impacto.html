@@ -1,1 +1,364 @@
-xd
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Informe de Impacto - EcoPrenda{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/informe_impacto.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="container my-5">
+    <!-- Selector de Tipo de Informe -->
+    <div class="tipo-selector no-print">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="mb-2">
+                    <i class="bi bi-file-earmark-bar-graph"></i> Tipo de Informe
+                </h5>
+                <p class="text-muted mb-0 small">
+                    Selecciona qué informe deseas visualizar
+                </p>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="tipoInforme" onchange="cambiarTipo()">
+                    <option value="personal" {% if tipo == 'personal' %}selected{% endif %}>
+                        Mi Impacto Personal
+                    </option>
+                    {% if usuario.es_representante_fundacion %}
+                    <option value="fundacion" {% if tipo == 'fundacion' %}selected{% endif %}>
+                        Impacto de mi Fundación
+                    </option>
+                    {% endif %}
+                    {% if usuario.es_administrador %}
+                    <option value="global" {% if tipo == 'global' %}selected{% endif %}>
+                        Impacto Global
+                    </option>
+                    {% endif %}
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Header del Informe -->
+    <div class="informe-header">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <i class="bi bi-graph-up display-4"></i>
+            </div>
+            <div>
+                <small>Fecha: {{ "now"|date:"d/m/Y" }}</small>
+            </div>
+        </div>
+        <h1 class="display-4 mb-2">{{ informe.titulo }}</h1>
+        <p class="lead mb-0">Informe Detallado de Impacto Ambiental</p>
+    </div>
+    
+    <!-- Métricas Principales -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="metric-box">
+                <i class="bi bi-cloud metric-icon"></i>
+                <div class="metric-value">
+                    {{ informe.totales.carbono_kg|floatformat:1 }}
+                </div>
+                <div class="metric-label">kg de CO₂ Evitados</div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="metric-box">
+                <i class="bi bi-lightning metric-icon"></i>
+                <div class="metric-value">
+                    {{ informe.totales.energia_kwh|floatformat:1 }}
+                </div>
+                <div class="metric-label">kWh de Energía Ahorrados</div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="metric-box">
+                <i class="bi bi-droplet metric-icon"></i>
+                <div class="metric-value">
+                    {{ informe.totales.agua_litros|floatformat:0 }}
+                </div>
+                <div class="metric-label">Litros de Agua Ahorrados</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Resumen de Actividad -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-activity"></i> Resumen de Actividad
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-3">
+                            <h3 class="text-primary">{{ informe.total_transacciones }}</h3>
+                            <p class="text-muted mb-0">Transacciones Completadas</p>
+                        </div>
+                        
+                        {% for tipo, datos in informe.desglose.items %}
+                        <div class="col-md-3 mb-3">
+                            <h3 class="text-success">{{ datos.cantidad }}</h3>
+                            <p class="text-muted mb-0">{{ tipo }}s</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Desglose por Tipo de Transacción -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3 class="mb-3">
+                <i class="bi bi-pie-chart"></i> Desglose por Tipo de Transacción
+            </h3>
+            
+            {% for tipo, datos in informe.desglose.items %}
+            <div class="desglose-card">
+                <div class="desglose-header">
+                    <div>
+                        <h5 class="mb-0">
+                            {% if tipo == 'Donación' %}
+                                <span class="badge-tipo badge-donacion">
+                                    <i class="bi bi-heart-fill"></i> {{ tipo }}
+                                </span>
+                            {% elif tipo == 'Intercambio' %}
+                                <span class="badge-tipo badge-intercambio">
+                                    <i class="bi bi-arrow-left-right"></i> {{ tipo }}
+                                </span>
+                            {% elif tipo == 'Venta' %}
+                                <span class="badge-tipo badge-venta">
+                                    <i class="bi bi-cart-check"></i> {{ tipo }}
+                                </span>
+                            {% endif %}
+                        </h5>
+                    </div>
+                    <div>
+                        <h4 class="text-primary mb-0">{{ datos.cantidad }}</h4>
+                        <small class="text-muted">transacciones</small>
+                    </div>
+                </div>
+                
+                <div class="desglose-stats">
+                    <div class="desglose-stat">
+                        <i class="bi bi-cloud text-primary"></i>
+                        <h5 class="mt-2 mb-0">{{ datos.carbono|floatformat:1 }}</h5>
+                        <small class="text-muted">kg CO₂</small>
+                    </div>
+                    <div class="desglose-stat">
+                        <i class="bi bi-lightning text-warning"></i>
+                        <h5 class="mt-2 mb-0">{{ datos.energia|floatformat:1 }}</h5>
+                        <small class="text-muted">kWh</small>
+                    </div>
+                    <div class="desglose-stat">
+                        <i class="bi bi-droplet text-info"></i>
+                        <h5 class="mt-2 mb-0">{{ datos.agua|floatformat:0 }}</h5>
+                        <small class="text-muted">Litros</small>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                No hay transacciones completadas para mostrar en el desglose.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Equivalencias -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3 class="mb-3">
+                <i class="bi bi-bar-chart-line"></i> ¿Qué Significa Este Impacto?
+            </h3>
+            <p class="text-muted mb-4">
+                Para poner en perspectiva el impacto ambiental positivo generado
+            </p>
+            
+            <div class="row">
+                <div class="col-lg-6 mb-3">
+                    <div class="equivalencia-item">
+                        <div class="equivalencia-icon">
+                            <i class="bi bi-tree"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">{{ informe.equivalencias.arboles_año|floatformat:2 }} Árboles</h5>
+                            <p class="text-muted mb-0">Absorbiendo CO₂ durante un año completo</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-3">
+                    <div class="equivalencia-item">
+                        <div class="equivalencia-icon">
+                            <i class="bi bi-car-front"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">{{ informe.equivalencias.km_auto|floatformat:0 }} Kilómetros</h5>
+                            <p class="text-muted mb-0">Recorridos en un automóvil promedio</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-3">
+                    <div class="equivalencia-item">
+                        <div class="equivalencia-icon">
+                            <i class="bi bi-airplane"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">{{ informe.equivalencias.km_avion|floatformat:0 }} Kilómetros</h5>
+                            <p class="text-muted mb-0">De vuelo en avión comercial</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-3">
+                    <div class="equivalencia-item">
+                        <div class="equivalencia-icon">
+                            <i class="bi bi-lightbulb"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">{{ informe.equivalencias.horas_bombilla|floatformat:0 }} Horas</h5>
+                            <p class="text-muted mb-0">De bombilla LED encendida (10W)</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-3">
+                    <div class="equivalencia-item">
+                        <div class="equivalencia-icon">
+                            <i class="bi bi-phone"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">{{ informe.equivalencias.cargas_celular|floatformat:0 }} Cargas</h5>
+                            <p class="text-muted mb-0">Completas de teléfono celular</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-3">
+                    <div class="equivalencia-item">
+                        <div class="equivalencia-icon">
+                            <i class="bi bi-droplet-half"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">{{ informe.equivalencias.duchas|floatformat:0 }} Duchas</h5>
+                            <p class="text-muted mb-0">De 10 minutos de agua ahorrada</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-3">
+                    <div class="equivalencia-item">
+                        <div class="equivalencia-icon">
+                            <i class="bi bi-droplet"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">{{ informe.equivalencias.botellas_agua|floatformat:0 }} Botellas</h5>
+                            <p class="text-muted mb-0">De agua de 500ml ahorradas</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-3">
+                    <div class="equivalencia-item">
+                        <div class="equivalencia-icon">
+                            <i class="bi bi-house"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">{{ informe.equivalencias.dias_hogar|floatformat:1 }} Días</h5>
+                            <p class="text-muted mb-0">De energía en un hogar promedio</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Conclusión -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-success shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-check-circle"></i> Conclusión
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h5 class="text-success mb-3">¡Felicitaciones por tu impacto positivo!</h5>
+                    <p>
+                        {% if tipo == 'personal' %}
+                        Has evitado la emisión de <strong>{{ informe.totales.carbono_kg|floatformat:1 }} kg de CO₂</strong>
+                        a través de tus {{ informe.total_transacciones }} transacciones en EcoPrenda.
+                        Esto demuestra tu compromiso con la sostenibilidad y la economía circular.
+                        {% elif tipo == 'fundacion' %}
+                        Tu fundación ha contribuido a evitar <strong>{{ informe.totales.carbono_kg|floatformat:1 }} kg de CO₂</strong>
+                        mediante {{ informe.total_transacciones }} donaciones recibidas. Tu labor es fundamental
+                        para promover la reutilización y reducir el impacto ambiental de la industria textil.
+                        {% else %}
+                        La comunidad de EcoPrenda ha logrado evitar <strong>{{ informe.totales.carbono_kg|floatformat:1 }} kg de CO₂</strong>
+                        gracias a {{ informe.total_transacciones }} transacciones completadas. Juntos estamos
+                        construyendo un futuro más sostenible.
+                        {% endif %}
+                    </p>
+                    
+                    <div class="alert alert-success mt-3 mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Sigue así:</strong> Cada prenda reutilizada cuenta. 
+                        Comparte tu impacto y motiva a otros a unirse a la economía circular.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pie de página del informe -->
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center text-muted">
+                <small>
+                    <i class="bi bi-info-circle"></i>
+                    Los cálculos se basan en promedios de la industria textil y estudios científicos.
+                    <br>
+                    Informe generado el {{ "now"|date:"d/m/Y H:i" }} | EcoPrenda - Plataforma de Moda Sostenible
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Botón de Imprimir (Flotante) -->
+<button class="btn btn-primary btn-lg print-button no-print" onclick="window.print()">
+    <i class="bi bi-printer"></i> Imprimir Informe
+</button>
+
+<!-- Botón de Volver -->
+<div class="container mb-4 no-print">
+    <div class="text-center">
+        <a href="{% url 'mi_impacto' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a Mi Impacto
+        </a>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function cambiarTipo() {
+        const tipo = document.getElementById('tipoInforme').value;
+        window.location.href = `{% url 'informe_impacto' %}?tipo=${tipo}`;
+    }
+</script>
+{% endblock %}

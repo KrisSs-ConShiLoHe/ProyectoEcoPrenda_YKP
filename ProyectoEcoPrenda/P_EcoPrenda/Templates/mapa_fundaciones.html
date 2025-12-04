@@ -131,10 +131,10 @@
 
 <script>
     // Datos desde Django
-    const fundaciones = {{ fundaciones_json|safe }};
-    const usuarios = {{ usuarios_json|safe }};
-    const centroLat = {{ centro_lat }};
-    const centroLng = {{ centro_lng }};
+    const fundaciones = JSON.parse('{{ fundaciones_json|escapejs }}');
+    const usuarios = JSON.parse('{{ usuarios_json|escapejs }}');
+    const centroLat = parseFloat('{{ centro_lat|default:-33.4489 }}');
+    const centroLng = parseFloat('{{ centro_lng|default:-70.6693 }}');
     const apiKey = '{{ geoapify_api_key }}';
     
     // Inicializar el mapa
@@ -168,17 +168,15 @@
     fundaciones.forEach(fundacion => {
         const marker = L.marker([fundacion.lat, fundacion.lng], { icon: iconoFundacion }).addTo(map);
         
-        const popupContent = `
-            <div class="marker-info">
-                <h6><i class="bi bi-building text-success"></i> ${fundacion.nombre}</h6>
-                <p class="small mb-1"><i class="bi bi-geo-alt"></i> ${fundacion.direccion || 'Sin dirección'}</p>
-                ${fundacion.telefono ? `<p class="small mb-1"><i class="bi bi-telephone"></i> ${fundacion.telefono}</p>` : ''}
-                ${fundacion.correo_contacto ? `<p class="small mb-1"><i class="bi bi-envelope"></i> ${fundacion.correo_contacto}</p>` : ''}
-                <a href="/fundacion/${fundacion.id_fundacion}/" class="btn btn-sm btn-success w-100 mt-2">
-                    <i class="bi bi-eye"></i> Ver Fundación
-                </a>
-            </div>
-        `;
+        const popupContent = '<div class="marker-info">' +
+            '<h6><i class="bi bi-building text-success"></i> ' + fundacion.nombre + '</h6>' +
+            '<p class="small mb-1"><i class="bi bi-geo-alt"></i> ' + (fundacion.direccion || 'Sin dirección') + '</p>' +
+            (fundacion.telefono ? '<p class="small mb-1"><i class="bi bi-telephone"></i> ' + fundacion.telefono + '</p>' : '') +
+            (fundacion.correo_contacto ? '<p class="small mb-1"><i class="bi bi-envelope"></i> ' + fundacion.correo_contacto + '</p>' : '') +
+            '<a href="/fundacion/' + fundacion.id + '/" class="btn btn-sm btn-success w-100 mt-2">' +
+                '<i class="bi bi-eye"></i> Ver Fundación' +
+            '</a>' +
+        '</div>';
         
         marker.bindPopup(popupContent);
     });
@@ -207,18 +205,28 @@
     }
     
     // Ajustar el zoom para mostrar todos los marcadores
-    if (fundaciones.length > 0 || usuarios.length > 0) {
+    if (Array.isArray(fundaciones) && Array.isArray(usuarios) && (fundaciones.length > 0 || usuarios.length > 0)) {
         const group = new L.featureGroup();
-        
-        fundaciones.forEach(f => {
-            L.marker([f.lat, f.lng]).addTo(group);
-        });
-        
-        usuarios.forEach(u => {
-            L.marker([u.lat, u.lng]).addTo(group);
-        });
-        
-        map.fitBounds(group.getBounds().pad(0.1));
+
+        for (const f of fundaciones) {
+            if (f && typeof f.lat === 'number' && typeof f.lng === 'number' && !isNaN(f.lat) && !isNaN(f.lng)) {
+                L.marker([f.lat, f.lng]).addTo(group);
+            }
+        }
+
+        for (const u of usuarios) {
+            if (u && typeof u.lat === 'number' && typeof u.lng === 'number' && !isNaN(u.lat) && !isNaN(u.lng)) {
+                L.marker([u.lat, u.lng]).addTo(group);
+            }
+        }
+
+        if (group.getLayers().length > 0) {
+            try {
+                map.fitBounds(group.getBounds().pad(0.1));
+            } catch (e) {
+                console.warn('Error ajustando bounds del mapa:', e);
+            }
+        }
     }
 </script>
 {% endblock %}

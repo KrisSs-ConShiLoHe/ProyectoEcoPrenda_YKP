@@ -30,13 +30,10 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-!vv=3%%p7%(h*-3o2to1sc@s1&u2v0^-e!-bl-87g+npg5)xyb'
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = True  # Cambia a False en producción
 
-ALLOWED_HOSTS = ['192.168.1.87','127.0.0.1','localhost','proyectoecoprenda-ykp.onrender.com']
+ALLOWED_HOSTS = ['192.168.1.87', '127.0.0.1', 'localhost', 'proyectoecoprenda-ykp.onrender.com']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://proyectoecoprenda-ykp.onrender.com'
@@ -91,18 +88,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'P_EcoPrenda.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 # PostgreSQL (Principal)
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DB_URL'),
-        conn_max_age=600 # Opcional: para persistencia de conexión
+        conn_max_age=600  # Opcional: para persistencia de conexión
     )
 }
 
-# MySQL (Secundaria)
+# MySQL (Secundaria) - Mantengo intacto para aprendizaje y requerimiento
 DATABASES['mysql_db'] = dj_database_url.config(
     default=os.environ.get('MYSQL_ADDON_URI'),
     conn_max_age=600
@@ -128,18 +124,16 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en-us'  # Sugerencia: Cambia a 'es' si la app es en español
 
 TIME_ZONE = 'America/Santiago'
 
 USE_I18N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -181,9 +175,6 @@ SESSION_COOKIE_AGE = 86400  # 24 horas
 # Expirar sesión al cerrar el navegador
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # False = mantiene la sesión según SESSION_COOKIE_AGE
 
-# Guardar sesión en cada request (False = solo si se modifica)
-SESSION_SAVE_EVERY_REQUEST = False
-
 # Nombre de la cookie de sesión
 SESSION_COOKIE_NAME = 'ecoprenda_sessionid'
 
@@ -207,8 +198,10 @@ CSRF_COOKIE_NAME = 'ecoprenda_csrftoken'
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+# Agregado: Más headers para mayor seguridad
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'  # Sugerencia: Mejora privacidad
 
-# En producción, activar estos:
+# En producción, descomenta y activa estos (o usa un settings_prod.py separado):
 # SECURE_SSL_REDIRECT = True
 # SESSION_COOKIE_SECURE = True
 # CSRF_COOKIE_SECURE = True
@@ -221,27 +214,42 @@ X_FRAME_OPTIONS = 'DENY'
 # ==============================================================================
 
 # ---------------------- GEOAPIFY (Mapas) ----------------------
-GEOAPIFY_API_KEY = os.environ.get('GEOAPIFY_API_KEY', '2346b3fc49854fc9bd0017b7fa0647ca')
+# Cambiado: Sin default hardcoded; requiere .env
+GEOAPIFY_API_KEY = os.environ.get('GEOAPIFY_API_KEY')
+if not GEOAPIFY_API_KEY:
+    raise ValueError("GEOAPIFY_API_KEY no está definida en .env")
 
 # ---------------------- CLOUDINARY (Imágenes) ----------------------
+# Cambiado: Sin defaults hardcoded; requiere .env
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'daev2fgjt'),
-    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '176413229185279'),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'oCui-XzSjheafkQKxb4s_QmQ0W8')
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET')
 }
+# Valida que todas las claves estén presentes
+for key in CLOUDINARY_STORAGE.values():
+    if not key:
+        raise ValueError("Una o más claves de CLOUDINARY no están definidas en .env")
 
 # Usar Cloudinary como almacenamiento por defecto
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-# Opcional: usar Cloudinary como storage por defecto
-# DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-
 # ---------------------- CARBON INTERFACE (Impacto Ambiental) ----------------------
-CARBON_INTERFACE_API_KEY = os.environ.get('CARBON_INTERFACE_API_KEY', 'ZWybV8XIZA8Vwadp1jeWNw')
+# Cambiado: Sin default hardcoded; requiere .env
+CARBON_INTERFACE_API_KEY = os.environ.get('CARBON_INTERFACE_API_KEY')
+if not CARBON_INTERFACE_API_KEY:
+    raise ValueError("CARBON_INTERFACE_API_KEY no está definida en .env")
 
+# Configuración de Cloudinary (mantengo, pero asegúrate de que no duplique)
 cloudinary.config(
-    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'daev2fgjt'),
-    api_key=os.environ.get('CLOUDINARY_API_KEY', '176413229185279'),
-    api_secret=os.environ.get('CLOUDINARY_API_SECRET', 'oCui-XzSjheafkQKxb4s_QmQ0W8'),
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
     secure=True  # Usar HTTPS
 )
+
+# Validación final: Asegura que claves críticas estén presentes (opcional, para debugging)
+required_env_vars = ['DB_URL', 'MYSQL_ADDON_URI']  # Agrega más si necesitas
+for var in required_env_vars:
+    if not os.environ.get(var):
+        raise ValueError(f"{var} no está definida en .env")

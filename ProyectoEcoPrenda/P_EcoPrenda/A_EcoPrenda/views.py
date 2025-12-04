@@ -3,8 +3,11 @@ from django.contrib import messages
 from django.db.models import Q, Sum, Count
 from django.utils import timezone
 from django.http import JsonResponse
+from django import forms  # Agregado para forms
 import hashlib
 import json
+import logging  # Agregado para logging
+
 from .models import (
     Usuario, Prenda, Transaccion, TipoTransaccion, 
     Fundacion, Mensaje, ImpactoAmbiental, 
@@ -21,6 +24,7 @@ from .decorators import (
     cliente_only,
     role_required,
 )
+
 from django.conf import settings
 
 from .cloudinary_utils import (
@@ -42,6 +46,11 @@ from .carbon_utils import (
     formatear_equivalencia
 )
 
+from .forms import RegistroForm, PerfilForm, PrendaForm
+
+# Configuración de logging
+logger = logging.getLogger(__name__)
+
 # ------------------------------------------------------------------------------------------------------------------
 # Utilidades de usuario y autenticación
 
@@ -60,7 +69,7 @@ def verificar_password(password, password_hash, usuario=None):
     import hashlib
     from django.contrib.auth.hashers import check_password as django_check, make_password
     
-    if not password_hash:
+    if not password or not password_hash:
         return False
     # Si el hash está en formato Django (contiene '$'), usar la verificación estándar
     if '$' in password_hash:
@@ -68,8 +77,11 @@ def verificar_password(password, password_hash, usuario=None):
     # Fallback: legacy SHA256 hex
     if hashlib.sha256(password.encode()).hexdigest() == password_hash:
         if usuario is not None:
-            usuario.contrasena = make_password(password)
-            usuario.save()
+            try:
+                usuario.contrasena = make_password(password)
+                usuario.save()
+            except Exception as e:
+                logger.error(f"Error rehasheando contraseña para usuario {usuario.id}: {e}")
         return True
     return False
 
@@ -77,7 +89,10 @@ def get_usuario_actual(request):
     """Obtiene el usuario actual de la sesión"""
     usuario_id = request.session.get('usuario_id')
     if usuario_id:
-        return Usuario.objects.filter(id_usuario=usuario_id).first()
+        try:
+            return Usuario.objects.get(id=usuario_id)  # Cambiado: usa 'id' en lugar de 'id_usuario'
+        except Usuario.DoesNotExist:
+            return None
     return None
 
 
@@ -88,18 +103,18 @@ def puede_actualizar_transaccion(usuario, transaccion, permiso_requerido):
     Retorna tupla: (True/False, mensaje_error o None)
     """
     if permiso_requerido == 'origen':
-        if transaccion.id_usuario_origen.id_usuario != usuario.id_usuario:
+        if transaccion.user_origen.id != usuario.id:  # Cambiado: 'user_origen' en lugar de 'id_usuario_origen'
             return False, 'Solo el propietario/vendedor puede realizar esta acción.'
     elif permiso_requerido == 'destino':
-        if not transaccion.id_usuario_destino or transaccion.id_usuario_destino.id_usuario != usuario.id_usuario:
+        if not transaccion.user_destino or transaccion.user_destino.id != usuario.id:  # Cambiado: 'user_destino'
             return False, 'Solo el receptor/comprador puede realizar esta acción.'
     elif permiso_requerido == 'origen_o_destino':
-        es_origen = transaccion.id_usuario_origen.id_usuario == usuario.id_usuario
-        es_destino = transaccion.id_usuario_destino and transaccion.id_usuario_destino.id_usuario == usuario.id_usuario
+        es_origen = transaccion.user_origen.id == usuario.id
+        es_destino = transaccion.user_destino and transaccion.user_destino.id == usuario.id
         if not (es_origen or es_destino):
             return False, 'No tienes permiso para actualizar esta transacción.'
     elif permiso_requerido == 'representante':
-        if not (usuario.es_representante_fundacion() and usuario.fundacion_asignada == transaccion.id_fundacion):
+        if not (usuario.es_representante_fundacion() and usuario.fundacion_asignada == transaccion.fundacion):  # Cambiado: 'fundacion'
             return False, 'Solo el representante de la fundación puede realizar esta acción.'
     return True, None
 
@@ -114,7 +129,7 @@ def home(request):
         total_carbono=Sum('carbono_evitar_kg'),
         total_energia=Sum('energia_ahorrada_kwh')
     )
-    prendas_recientes = Prenda.objects.select_related('id_usuario').order_by('-fecha_publicacion')[:6]
+    prendas_recientes = Prenda.objects.select_related('user').order_by('-fecha_publicacion')[:6]  # Cambiado: 'user' en lugar de 'id_usuario'
     context = {
         'usuario': usuario,
         'total_prendas': total_prendas,
@@ -127,34 +142,24 @@ def home(request):
 @anonymous_required
 def registro_usuario(request):
     if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        apellido = request.POST.get('apellido')
-        correo = request.POST.get('correo')
-        contrasena = request.POST.get('contrasena')
-        telefono = request.POST.get('telefono')
-        comuna = request.POST.get('comuna')
-        rol = request.POST.get('rol', 'CLIENTE')
-        # Validaciones
-        if Usuario.objects.filter(correo=correo).exists():
-            messages.error(request, 'El correo ya está registrado.')
-            return render(request, 'registro.html')
-        roles_validos = ['CLIENTE', 'REPRESENTANTE_FUNDACION', 'MODERADOR', 'ADMINISTRADOR']
-        if rol not in roles_validos:
-            rol = 'CLIENTE'
-        usuario = Usuario(
-            nombre=nombre,
-            apellido=apellido,
-            correo=correo,
-            telefono=telefono,
-            comuna=comuna,
-            rol=rol,
-            fecha_registro=timezone.now()
-        )
-        usuario.set_password(contrasena)
-        usuario.save()
-        messages.success(request, f'¡Registro exitoso como {usuario.get_rol_display()}! Ya puedes iniciar sesión.')
-        return redirect('login')
-    return render(request, 'registro.html')
+        form = RegistroForm(request.POST)
+        if form.is_valid():
+            usuario = form.save(commit=False)
+            usuario.fecha_registro = timezone.now()
+            usuario.set_password(form.cleaned_data['contrasena'])
+            try:
+                usuario.save()
+                messages.success(request, f'¡Registro exitoso como {usuario.get_rol_display()}! Ya puedes iniciar sesión.')
+                return redirect('login')
+            except Exception as e:
+                logger.error(f"Error guardando usuario en registro: {e}")
+                messages.error(request, 'Error interno. Intenta nuevamente.')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
+    else:
+        form = RegistroForm()
+    return render(request, 'registro.html', {'form': form})
 
 @anonymous_required
 def login_usuario(request):
@@ -164,12 +169,18 @@ def login_usuario(request):
         if not correo or not contrasena:
             messages.error(request, 'Correo y contraseña son obligatorios.')
             return render(request, 'login.html')
-        usuario = Usuario.objects.filter(correo=correo).first()
-        if usuario and verificar_password(contrasena, usuario.contrasena, usuario):
-            request.session['usuario_id'] = usuario.id_usuario
-            messages.success(request, f'¡Bienvenido, {usuario.nombre}!')
-            return redirect('home')
-        messages.error(request, 'Usuario o contraseña incorrectos.')
+        try:
+            usuario = Usuario.objects.get(correo=correo)
+            if verificar_password(contrasena, usuario.contrasena, usuario):
+                request.session['usuario_id'] = usuario.id  # Cambiado: 'id' en lugar de 'id_usuario'
+                messages.success(request, f'¡Bienvenido, {usuario.nombre}!')
+                return redirect('home')
+            else:
+                logger.warning(f"Intento de login fallido para correo: {correo}")
+                messages.error(request, 'Usuario o contraseña incorrectos.')
+        except Usuario.DoesNotExist:
+            logger.warning(f"Intento de login con correo inexistente: {correo}")
+            messages.error(request, 'Usuario o contraseña incorrectos.')
     return render(request, 'login.html')
 
 @login_required_custom
@@ -184,27 +195,32 @@ def perfil_usuario(request):
     if not usuario:
         return redirect('login')
     if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        apellido = request.POST.get('apellido')
-        telefono = request.POST.get('telefono')
-        comuna = request.POST.get('comuna')
-        if not all([nombre, apellido, telefono, comuna]):
-            messages.error(request, 'Todos los campos son obligatorios.')
-            return render(request, 'perfil.html', {'usuario': usuario})
-        if 'imagen_usuario' in request.FILES:
-            usuario.imagen_usuario = request.FILES['imagen_usuario']
-        usuario.nombre = nombre
-        usuario.apellido = apellido
-        usuario.telefono = telefono
-        usuario.comuna = comuna
-        usuario.save()
-        messages.success(request, 'Perfil actualizado correctamente.')
-        return redirect('perfil')
-    total_prendas = Prenda.objects.filter(id_usuario=usuario).count()
+        form = PerfilForm(request.POST, request.FILES, instance=usuario)
+        if form.is_valid():
+            if 'imagen_usuario' in request.FILES:
+                # Validar imagen antes de guardar
+                imagen = request.FILES['imagen_usuario']
+                if not validar_imagen(imagen):
+                    messages.error(request, 'Imagen inválida. Solo JPG/PNG, máximo 5MB.')
+                    return render(request, 'perfil.html', {'usuario': usuario, 'form': form})
+            try:
+                form.save()
+                messages.success(request, 'Perfil actualizado correctamente.')
+                return redirect('perfil')
+            except Exception as e:
+                logger.error(f"Error actualizando perfil para usuario {usuario.id}: {e}")
+                messages.error(request, 'Error interno. Intenta nuevamente.')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
+    else:
+        form = PerfilForm(instance=usuario)
+    
+    total_prendas = Prenda.objects.filter(user=usuario).count()  # Cambiado: 'user' en lugar de 'id_usuario'
     transacciones_realizadas = Transaccion.objects.filter(
-        Q(id_usuario_origen=usuario) | Q(id_usuario_destino=usuario)
+        Q(user_origen=usuario) | Q(user_destino=usuario)  # Cambiado: 'user_origen' y 'user_destino'
     ).count()
-    impactos = ImpactoAmbiental.objects.filter(id_prenda__id_usuario=usuario)
+    impactos = ImpactoAmbiental.objects.select_related('prenda').filter(prenda__user=usuario)  # Cambiado: 'prenda__user'
     impacto_personal = impactos.aggregate(
         total_carbono=Sum('carbono_evitar_kg'),
         total_energia=Sum('energia_ahorrada_kwh')
@@ -214,8 +230,10 @@ def perfil_usuario(request):
         'total_prendas': total_prendas,
         'transacciones_realizadas': transacciones_realizadas,
         'impacto_personal': impacto_personal,
+        'form': form,
     }
     return render(request, 'perfil.html', context)
+
 
 # ------------------------------------------------------------------------------------------------------------------
 # Gestión de Prendas 
@@ -428,39 +446,40 @@ def buscar_prendas(request):
 def proponer_intercambio(request, id_prenda):
     """Permite a un usuario proponer un intercambio por otra prenda."""
     usuario = get_usuario_actual(request)
-    prenda_destino = get_object_or_404(Prenda, id_prenda=id_prenda)
+    prenda_destino = get_object_or_404(Prenda.objects.select_related('user'), pk=id_prenda)  # Cambiado: 'pk=id_prenda', agregado select_related
 
-    if prenda_destino.id_usuario.id_usuario == usuario.id_usuario:
+    if prenda_destino.user.id == usuario.id:  # Cambiado: 'prenda_destino.user.id == usuario.id'
         messages.error(request, 'No puedes intercambiar con tu propia prenda.')
         return redirect('detalle_prenda', id_prenda=id_prenda)
-    if not prenda_destino.esta_disponible():
-        messages.error(request, f'Esta prenda ya no está disponible para intercambio ({prenda_destino.get_disponibilidad_display()}).')
+    if prenda_destino.estado != 'DISPONIBLE':  # Cambiado: check directo en 'estado'
+        messages.error(request, f'Esta prenda ya no está disponible para intercambio ({prenda_destino.get_estado_display()}).')
         return redirect('detalle_prenda', id_prenda=id_prenda)
 
     if request.method == 'POST':
         prenda_origen_id = request.POST.get('prenda_origen')
-        prenda_origen = get_object_or_404(Prenda, id_prenda=prenda_origen_id, id_usuario=usuario)
-        if not prenda_origen.esta_disponible():
+        prenda_origen = get_object_or_404(Prenda, pk=prenda_origen_id, user=usuario)  # Cambiado: 'pk=prenda_origen_id', 'user=usuario'
+        if prenda_origen.estado != 'DISPONIBLE':  # Cambiado: check directo
             messages.error(request, 'La prenda ofrecida ya no está disponible.')
             return redirect('detalle_prenda', id_prenda=id_prenda)
         tipo_intercambio, _ = TipoTransaccion.objects.get_or_create(nombre_tipo='Intercambio', defaults={
             'descripcion': 'Intercambio de prendas entre usuarios'
         })
-        transaccion = Transaccion.objects.create(
-            id_prenda=prenda_destino,
-            id_tipo=tipo_intercambio,
-            id_usuario_origen=usuario,
-            id_usuario_destino=prenda_destino.id_usuario,
-            fecha_transaccion=timezone.now(),
-            estado='PENDIENTE'
-        )
-        # No marcar como NO_DISPONIBLE aquí; la prenda destino permanece DISPONIBLE para que otros contacten.
-        # Solo se reservará cuando el destino acepte la propuesta.
-        messages.success(request, f'¡Intercambio propuesto! Código de seguimiento: {transaccion.id_transaccion}. Ahora puedes negociar con el otro usuario.')
-        # Redirigir a conversación con el otro usuario para negociar
-        return redirect('conversacion', id_usuario=prenda_destino.id_usuario.id_usuario)
+        try:
+            transaccion = Transaccion.objects.create(
+                prenda=prenda_destino,  # Cambiado: 'prenda=prenda_destino'
+                tipo=tipo_intercambio,  # Cambiado: 'tipo=tipo_intercambio'
+                user_origen=usuario,  # Cambiado: 'user_origen=usuario'
+                user_destino=prenda_destino.user,  # Cambiado: 'user_destino=prenda_destino.user'
+                fecha_transaccion=timezone.now(),
+                estado='PENDIENTE'
+            )
+            messages.success(request, f'¡Intercambio propuesto! Código de seguimiento: {transaccion.id}. Ahora puedes negociar con el otro usuario.')  # Cambiado: 'transaccion.id'
+            return redirect('conversacion', id_usuario=prenda_destino.user.id)  # Cambiado: 'prenda_destino.user.id'
+        except Exception as e:
+            logger.error(f"Error creando intercambio para usuario {usuario.id}: {e}")
+            messages.error(request, 'Error interno. Intenta nuevamente.')
 
-    mis_prendas_usuario = Prenda.objects.filter(id_usuario=usuario, disponibilidad='DISPONIBLE')
+    mis_prendas_usuario = Prenda.objects.filter(user=usuario, estado='DISPONIBLE')  # Cambiado: 'user=usuario', 'estado'
     context = {
         'usuario': usuario,
         'prenda_destino': prenda_destino,
@@ -471,7 +490,7 @@ def proponer_intercambio(request, id_prenda):
 @login_required_custom
 def marcar_intercambio_entregado(request, id_transaccion):
     usuario = get_usuario_actual(request)
-    transaccion = get_object_or_404(Transaccion, id_transaccion=id_transaccion)
+    transaccion = get_object_or_404(Transaccion.objects.select_related('prenda', 'user_origen'), pk=id_transaccion)  # Cambiado: agregado select_related
     
     permitido, error = puede_actualizar_transaccion(usuario, transaccion, 'origen')
     if not permitido:
@@ -479,14 +498,18 @@ def marcar_intercambio_entregado(request, id_transaccion):
     if transaccion.estado != 'RESERVADA':
         return JsonResponse({'error': 'La transacción no está en estado reservado.'}, status=400)
     
-    transaccion.marcar_en_proceso()
-    messages.success(request, 'Has marcado la prenda como entregada.')
-    return redirect('mis_transacciones')
+    try:
+        transaccion.marcar_en_proceso()
+        messages.success(request, 'Has marcado la prenda como entregada.')
+        return redirect('mis_transacciones')
+    except Exception as e:
+        logger.error(f"Error marcando intercambio entregado {transaccion.id}: {e}")
+        return JsonResponse({'error': 'Error interno'}, status=500)
 
 @login_required_custom
 def confirmar_recepcion_intercambio(request, id_transaccion):
     usuario = get_usuario_actual(request)
-    transaccion = get_object_or_404(Transaccion, id_transaccion=id_transaccion)
+    transaccion = get_object_or_404(Transaccion.objects.select_related('prenda', 'user_destino'), pk=id_transaccion)  # Cambiado: agregado select_related
     
     permitido, error = puede_actualizar_transaccion(usuario, transaccion, 'destino')
     if not permitido:
@@ -494,14 +517,18 @@ def confirmar_recepcion_intercambio(request, id_transaccion):
     if transaccion.estado != 'EN_PROCESO':
         return JsonResponse({'error': 'Debes esperar a que el propietario marque como entregada.'}, status=400)
     
-    transaccion.marcar_como_completada()
-    messages.success(request, '¡Intercambio completado con éxito!')
-    return redirect('mis_transacciones')
+    try:
+        transaccion.marcar_como_completada()
+        messages.success(request, '¡Intercambio completado con éxito!')
+        return redirect('mis_transacciones')
+    except Exception as e:
+        logger.error(f"Error confirmando recepción intercambio {transaccion.id}: {e}")
+        return JsonResponse({'error': 'Error interno'}, status=500)
 
 @login_required_custom
 def cancelar_intercambio(request, id_transaccion):
     usuario = get_usuario_actual(request)
-    transaccion = get_object_or_404(Transaccion, id_transaccion=id_transaccion)
+    transaccion = get_object_or_404(Transaccion.objects.select_related('prenda'), pk=id_transaccion)  # Cambiado: agregado select_related
     
     permitido, error = puede_actualizar_transaccion(usuario, transaccion, 'origen')
     if not permitido:
@@ -509,33 +536,24 @@ def cancelar_intercambio(request, id_transaccion):
     if transaccion.estado not in ['PENDIENTE', 'RESERVADA', 'EN_PROCESO']:
         return JsonResponse({'error': 'No puedes cancelar una transacción finalizada.'}, status=400)
     
-    transaccion.cancelar()
-    messages.success(request, 'Intercambio cancelado y prenda devuelta a disponible.')
-    return redirect('mis_transacciones')
-
+    try:
+        transaccion.cancelar()
+        messages.success(request, 'Intercambio cancelado y prenda devuelta a disponible.')
+        return redirect('mis_transacciones')
+    except Exception as e:
+        logger.error(f"Error cancelando intercambio {transaccion.id}: {e}")
+        return JsonResponse({'error': 'Error interno'}, status=500)
 
 @login_required_custom
 def comprar_prenda(request, id_prenda):
-    """Proponer compra de una prenda.
-    
-    FLUJO DE NEGOCIACIÓN:
-    1. Usuario hace clic en "Proponer Compra"
-    2. Se crea una transacción con estado PENDIENTE
-    3. LA PRENDA PERMANECE COMO DISPONIBLE (no se reserva automáticamente)
-    4. El comprador y vendedor pueden contactarse para negociar
-    5. El vendedor ve la propuesta en 'mis_transacciones' y puede:
-       - ACEPTAR: La prenda cambia a RESERVADA y comienza el envío
-       - RECHAZAR: La prenda permanece DISPONIBLE para otras propuestas
-    6. Una vez ACEPTADA, se sigue el flujo normal: marcar entregada → confirmar recepción
-    """
+    """Proponer compra de una prenda."""
     usuario = get_usuario_actual(request)
-    prenda = get_object_or_404(Prenda, id_prenda=id_prenda)
+    prenda = get_object_or_404(Prenda.objects.select_related('user'), pk=id_prenda)  # Cambiado: agregado select_related
     
-    # Validaciones
-    if prenda.id_usuario.id_usuario == usuario.id_usuario:
+    if prenda.user.id == usuario.id:  # Cambiado: 'prenda.user.id == usuario.id'
         messages.error(request, "No puedes comprar tu propia prenda.")
         return redirect('detalle_prenda', id_prenda=id_prenda)
-    if not prenda.esta_disponible():
+    if prenda.estado != 'DISPONIBLE':  # Cambiado: check directo
         messages.error(request, "Esta prenda ya no está disponible.")
         return redirect('detalle_prenda', id_prenda=id_prenda)
 
@@ -543,19 +561,20 @@ def comprar_prenda(request, id_prenda):
         tipo_venta, _ = TipoTransaccion.objects.get_or_create(
             nombre_tipo='Venta', defaults={'descripcion': 'Venta de prenda entre usuarios'}
         )
-        transaccion = Transaccion.objects.create(
-            id_prenda=prenda,
-            id_tipo=tipo_venta,
-            id_usuario_origen=prenda.id_usuario,
-            id_usuario_destino=usuario,
-            fecha_transaccion=timezone.now(),
-            estado='PENDIENTE'
-        )
-        # No marcar como RESERVADA aquí; se hará cuando se acepte la propuesta.
-        # Esto permite que otros usuarios contacten mientras se negocia.
-        messages.success(request, f'Solicitud de compra enviada. Código: {transaccion.id_transaccion}. Ahora puedes negociar con el vendedor.')
-        # Redirigir a conversación con el vendedor para negociar
-        return redirect('conversacion', id_usuario=prenda.id_usuario.id_usuario)
+        try:
+            transaccion = Transaccion.objects.create(
+                prenda=prenda,  # Cambiado: 'prenda=prenda'
+                tipo=tipo_venta,  # Cambiado: 'tipo=tipo_venta'
+                user_origen=prenda.user,  # Cambiado: 'user_origen=prenda.user'
+                user_destino=usuario,  # Cambiado: 'user_destino=usuario'
+                fecha_transaccion=timezone.now(),
+                estado='PENDIENTE'
+            )
+            messages.success(request, f'Solicitud de compra enviada. Código: {transaccion.id}. Ahora puedes negociar con el vendedor.')  # Cambiado: 'transaccion.id'
+            return redirect('conversacion', id_usuario=prenda.user.id)  # Cambiado: 'prenda.user.id'
+        except Exception as e:
+            logger.error(f"Error creando compra para usuario {usuario.id}: {e}")
+            messages.error(request, 'Error interno. Intenta nuevamente.')
     
     context = {"usuario": usuario, "prenda": prenda}
     return render(request, 'comprar_prenda.html', context)
@@ -563,7 +582,7 @@ def comprar_prenda(request, id_prenda):
 @login_required_custom
 def marcar_compra_entregado(request, id_transaccion):
     usuario = get_usuario_actual(request)
-    transaccion = get_object_or_404(Transaccion, id_transaccion=id_transaccion)
+    transaccion = get_object_or_404(Transaccion.objects.select_related('prenda', 'user_origen'), pk=id_transaccion)  # Cambiado: agregado select_related
     
     permitido, error = puede_actualizar_transaccion(usuario, transaccion, 'origen')
     if not permitido:
@@ -571,36 +590,40 @@ def marcar_compra_entregado(request, id_transaccion):
     if transaccion.estado != 'RESERVADA':
         return JsonResponse({'error': 'La transacción no está en estado reservado.'}, status=400)
     
-    transaccion.marcar_en_proceso()
-    messages.success(request, 'Has marcado la prenda como entregada.')
-    return redirect('mis_transacciones')
-
+    try:
+        transaccion.marcar_en_proceso()
+        messages.success(request, 'Has marcado la prenda como entregada.')
+        return redirect('mis_transacciones')
+    except Exception as e:
+        logger.error(f"Error marcando compra entregada {transaccion.id}: {e}")
+        return JsonResponse({'error': 'Error interno'}, status=500)
 
 @login_required_custom
 def marcar_donacion_enviada(request, id_transaccion):
-    """Permite al donante marcar su donación como enviada (pone la transacción en EN_PROCESO)."""
+    """Permite al donante marcar su donación como enviada."""
     usuario = get_usuario_actual(request)
-    transaccion = get_object_or_404(Transaccion, id_transaccion=id_transaccion)
+    transaccion = get_object_or_404(Transaccion.objects.select_related('prenda', 'user_origen'), pk=id_transaccion)  # Cambiado: agregado select_related
 
     permitido, error = puede_actualizar_transaccion(usuario, transaccion, 'origen')
     if not permitido:
         return JsonResponse({'error': error}, status=403)
-
-    # Solo aplicable para donaciones
     if not transaccion.es_donacion():
         return JsonResponse({'error': 'Esta acción solo aplica a donaciones.'}, status=400)
-
     if transaccion.estado not in ['PENDIENTE', 'RESERVADA']:
         return JsonResponse({'error': 'La transacción no está en un estado válido para marcar como enviada.'}, status=400)
 
-    transaccion.marcar_en_proceso()
-    messages.success(request, 'Has marcado la donación como enviada. La fundación confirmará la recepción.')
-    return redirect('mis_transacciones')
+    try:
+        transaccion.marcar_en_proceso()
+        messages.success(request, 'Has marcado la donación como enviada. La fundación confirmará la recepción.')
+        return redirect('mis_transacciones')
+    except Exception as e:
+        logger.error(f"Error marcando donación enviada {transaccion.id}: {e}")
+        return JsonResponse({'error': 'Error interno'}, status=500)
 
 @login_required_custom
 def confirmar_recepcion_compra(request, id_transaccion):
     usuario = get_usuario_actual(request)
-    transaccion = get_object_or_404(Transaccion, id_transaccion=id_transaccion)
+    transaccion = get_object_or_404(Transaccion.objects.select_related('prenda', 'user_destino'), pk=id_transaccion)  # Cambiado: agregado select_related
     
     permitido, error = puede_actualizar_transaccion(usuario, transaccion, 'destino')
     if not permitido:
@@ -608,14 +631,18 @@ def confirmar_recepcion_compra(request, id_transaccion):
     if transaccion.estado != 'EN_PROCESO':
         return JsonResponse({'error': 'Solo puedes confirmar si ya fue marcada como entregada.'}, status=400)
     
-    transaccion.marcar_como_completada()
-    messages.success(request, '¡Transacción completada con éxito!')
-    return redirect('mis_transacciones')
+    try:
+        transaccion.marcar_como_completada()
+        messages.success(request, '¡Transacción completada con éxito!')
+        return redirect('mis_transacciones')
+    except Exception as e:
+        logger.error(f"Error confirmando recepción compra {transaccion.id}: {e}")
+        return JsonResponse({'error': 'Error interno'}, status=500)
 
 @login_required_custom
 def cancelar_compra(request, id_transaccion):
     usuario = get_usuario_actual(request)
-    transaccion = get_object_or_404(Transaccion, id_transaccion=id_transaccion)
+    transaccion = get_object_or_404(Transaccion.objects.select_related('prenda'), pk=id_transaccion)  # Cambiado: agregado select_related
     
     permitido, error = puede_actualizar_transaccion(usuario, transaccion, 'origen')
     if not permitido:
@@ -623,19 +650,23 @@ def cancelar_compra(request, id_transaccion):
     if transaccion.estado not in ['PENDIENTE', 'RESERVADA', 'EN_PROCESO']:
         return JsonResponse({'error': 'No puedes cancelar una transacción finalizada.'}, status=400)
     
-    transaccion.cancelar()
-    messages.success(request, 'Transacción cancelada y prenda devuelta a disponible.')
-    return redirect('mis_transacciones')
+    try:
+        transaccion.cancelar()
+        messages.success(request, 'Transacción cancelada y prenda devuelta a disponible.')
+        return redirect('mis_transacciones')
+    except Exception as e:
+        logger.error(f"Error cancelando compra {transaccion.id}: {e}")
+        return JsonResponse({'error': 'Error interno'}, status=500)
 
 @login_required_custom
 def donar_prenda(request, id_prenda):
     """Permite a un usuario donar una prenda propia a una fundación activa."""
     usuario = get_usuario_actual(request)
-    prenda = get_object_or_404(Prenda, id_prenda=id_prenda)
-    if prenda.id_usuario.id_usuario != usuario.id_usuario:
+    prenda = get_object_or_404(Prenda.objects.select_related('user'), pk=id_prenda)  # Cambiado: agregado select_related
+    if prenda.user.id != usuario.id:  # Cambiado: 'prenda.user.id != usuario.id'
         messages.error(request, 'Solo puedes donar tus propias prendas.')
         return redirect('detalle_prenda', id_prenda=id_prenda)
-    if not prenda.esta_disponible():
+    if prenda.estado != 'DISPONIBLE':  # Cambiado: check directo
         messages.error(request, 'Esta prenda ya no está disponible.')
         return redirect('detalle_prenda', id_prenda=id_prenda)
     if request.method == 'POST':
@@ -643,28 +674,30 @@ def donar_prenda(request, id_prenda):
         if not fundacion_id:
             messages.error(request, 'Debes seleccionar una fundación válida.')
             return redirect('donar_prenda', id_prenda=id_prenda)
-        fundacion = get_object_or_404(Fundacion, id_fundacion=fundacion_id, activa=True)
+        fundacion = get_object_or_404(Fundacion.objects.select_related('representante'), pk=fundacion_id, activa=True)  # Cambiado: agregado select_related
         tipo_donacion, _ = TipoTransaccion.objects.get_or_create(nombre_tipo='Donación', defaults={
             'descripcion': 'Donación de prenda a fundación'
         })
-        transaccion = Transaccion.objects.create(
-            id_prenda=prenda,
-            id_tipo=tipo_donacion,
-            id_usuario_origen=usuario,
-            id_fundacion=fundacion,
-            fecha_transaccion=timezone.now(),
-            estado='PENDIENTE'
-        )
-        # Para donaciones, marcar como RESERVADA inmediatamente (ya que es una oferta unilateral).
-        # Esto evita que la prenda sea donada a múltiples fundaciones.
-        prenda.marcar_como_reservada()
-        # Verificar logros
-        nuevos_logros = verificar_logros(usuario)
-        if nuevos_logros:
-            for logro in nuevos_logros:
-                messages.success(request, f'🏆 ¡Nuevo logro desbloqueado: {logro.nombre}!')
-        messages.success(request, f'¡Prenda donada exitosamente a {fundacion.nombre}! Código de seguimiento: {transaccion.id_transaccion}')
-        return redirect('mis_transacciones')
+        try:
+            transaccion = Transaccion.objects.create(
+                prenda=prenda,  # Cambiado: 'prenda=prenda'
+                tipo=tipo_donacion,  # Cambiado: 'tipo=tipo_donacion'
+                user_origen=usuario,  # Cambiado: 'user_origen=usuario'
+                fundacion=fundacion,  # Cambiado: 'fundacion=fundacion'
+                fecha_transaccion=timezone.now(),
+                estado='PENDIENTE'
+            )
+            prenda.marcar_como_reservada()
+            # Verificar logros
+            nuevos_logros = verificar_logros(usuario)  # Asumiendo que existe
+            if nuevos_logros:
+                for logro in nuevos_logros:
+                    messages.success(request, f'🏆 ¡Nuevo logro desbloqueado: {logro.nombre}!')
+            messages.success(request, f'¡Prenda donada exitosamente a {fundacion.nombre}! Código de seguimiento: {transaccion.id}')  # Cambiado: 'transaccion.id'
+            return redirect('mis_transacciones')
+        except Exception as e:
+            logger.error(f"Error donando prenda {prenda.pk} por usuario {usuario.id}: {e}")
+            messages.error(request, 'Error interno. Intenta nuevamente.')
     fundaciones = Fundacion.objects.filter(activa=True)
     context = {
         'usuario': usuario,
@@ -673,25 +706,19 @@ def donar_prenda(request, id_prenda):
     }
     return render(request, 'donar_prenda.html', context)
 
-
 @login_required_custom
 def mis_transacciones(request):
     usuario = get_usuario_actual(request)
     
-    # ENVIADAS: El usuario es el propietario original (origen)
-    # Incluye: Ventas, Intercambios, Donaciones
     transacciones_enviadas = Transaccion.objects.filter(
-        id_usuario_origen=usuario
-    )
+        user_origen=usuario  # Cambiado: 'user_origen=usuario'
+    ).select_related('prenda', 'tipo', 'user_destino', 'fundacion')  # Agregado select_related
     
-    # RECIBIDAS: El usuario es el comprador/interesado (destino)
-    # Excluye donaciones (donde id_fundacion no es NULL)
-    # Solo incluye Compras e Intercambios
     transacciones_recibidas = Transaccion.objects.filter(
-        id_usuario_destino=usuario
+        user_destino=usuario  # Cambiado: 'user_destino=usuario'
     ).exclude(
-        id_fundacion__isnull=False  # Excluye donaciones
-    )
+        fundacion__isnull=False  # Cambiado: 'fundacion__isnull=False'
+    ).select_related('prenda', 'tipo', 'user_origen')  # Agregado select_related
     
     context = {
         "usuario": usuario,
@@ -700,20 +727,13 @@ def mis_transacciones(request):
     }
     return render(request, 'mis_transacciones.html', context)
 
-
 @login_required_custom
 def actualizar_estado_transaccion(request, id_transaccion):
-    """Permite actualizar el estado de una transacción por un usuario involucrado.
-    
-    Flujo:
-    - Cuando estado = PENDIENTE y se acepta (ACEPTADA): marca prenda como RESERVADA.
-    - Cuando estado = PENDIENTE y se rechaza (RECHAZADA): prenda vuelve a DISPONIBLE.
-    """
+    """Permite actualizar el estado de una transacción."""
     usuario = get_usuario_actual(request)
-    transaccion = get_object_or_404(Transaccion, id_transaccion=id_transaccion)
-    # Permisos: solo destino u origen puede actualizar (en este caso, destino acepta/rechaza)
-    if transaccion.id_usuario_destino and transaccion.id_usuario_destino.id_usuario != usuario.id_usuario:
-        if transaccion.id_usuario_origen.id_usuario != usuario.id_usuario:
+    transaccion = get_object_or_404(Transaccion.objects.select_related('prenda', 'user_destino', 'user_origen'), pk=id_transaccion)  # Cambiado: agregado select_related
+    if transaccion.user_destino and transaccion.user_destino.id != usuario.id:  # Cambiado: 'user_destino'
+        if transaccion.user_origen.id != usuario.id:  # Cambiado: 'user_origen'
             return JsonResponse({'error': 'No autorizado'}, status=403)
     
     if request.method == 'POST':
@@ -721,48 +741,48 @@ def actualizar_estado_transaccion(request, id_transaccion):
         if not nuevo_estado or nuevo_estado not in dict(Transaccion.ESTADO_CHOICES):
             return JsonResponse({'error': 'Estado inválido'}, status=400)
         
-        # Solo permitir cambios desde PENDIENTE a ACEPTADA o RECHAZADA por el destino
         if transaccion.estado == 'PENDIENTE':
             if nuevo_estado == 'ACEPTADA':
-                # Marcar prenda como RESERVADA al aceptar
-                transaccion.id_prenda.marcar_como_reservada()
-                transaccion.estado = nuevo_estado
-                transaccion.save()
-                messages.success(request, 'Has aceptado la propuesta. La prenda ahora está reservada.')
+                try:
+                    transaccion.prenda.marcar_como_reservada()  # Cambiado: 'prenda'
+                    transaccion.estado = nuevo_estado
+                    transaccion.save()
+                    messages.success(request, 'Has aceptado la propuesta. La prenda ahora está reservada.')
+                except Exception as e:
+                    logger.error(f"Error aceptando transacción {transaccion.id}: {e}")
+                    return JsonResponse({'error': 'Error interno'}, status=500)
             elif nuevo_estado == 'RECHAZADA':
-                transaccion.estado = nuevo_estado
-                transaccion.save()
-                messages.success(request, 'Has rechazado la propuesta. La prenda sigue disponible.')
+                try:
+                    transaccion.estado = nuevo_estado
+                    transaccion.save()
+                    messages.success(request, 'Has rechazado la propuesta. La prenda sigue disponible.')
+                except Exception as e:
+                    logger.error(f"Error rechazando transacción {transaccion.id}: {e}")
+                    return JsonResponse({'error': 'Error interno'}, status=500)
             else:
                 return JsonResponse({'error': 'Desde PENDIENTE solo puedes aceptar (ACEPTADA) o rechazar (RECHAZADA).'}, status=400)
         else:
-            # Para otros estados, aplicar cambios normales
-            transaccion.estado = nuevo_estado
-            transaccion.save()
-            messages.success(request, f'Estado de la transacción actualizado a: {transaccion.get_estado_display()}')
+            try:
+                transaccion.estado = nuevo_estado
+                transaccion.save()
+                messages.success(request, f'Estado de la transacción actualizado a: {transaccion.get_estado_display()}')
+            except Exception as e:
+                logger.error(f"Error actualizando estado transacción {transaccion.id}: {e}")
+                return JsonResponse({'error': 'Error interno'}, status=500)
         
         return redirect('mis_transacciones')
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 @login_required_custom
 def reportar_disputa(request, id_transaccion):
-    """Permite al comprador/receptor reportar un problema con la prenda cuando está EN_PROCESO_ENTREGA.
-    
-    Cambios:
-    - Transacción pasa a estado EN_DISPUTA
-    - Se registra quién reportó y la razón
-    - Notificación automática al equipo de administración
-    - Sistema de moderación manual para resolver
-    """
+    """Permite al comprador/receptor reportar un problema con la prenda."""
     usuario = get_usuario_actual(request)
-    transaccion = get_object_or_404(Transaccion, id_transaccion=id_transaccion)
+    transaccion = get_object_or_404(Transaccion.objects.select_related('prenda', 'user_destino'), pk=id_transaccion)  # Cambiado: agregado select_related
     
-    # Solo el receptor puede reportar
-    if not transaccion.id_usuario_destino or transaccion.id_usuario_destino.id_usuario != usuario.id_usuario:
+    if not transaccion.user_destino or transaccion.user_destino.id != usuario.id:  # Cambiado: 'user_destino'
         messages.error(request, 'Solo el receptor puede reportar problemas.')
         return redirect('mis_transacciones')
     
-    # Solo se puede reportar en estado EN_PROCESO_ENTREGA
     if transaccion.estado != 'EN_PROCESO':
         messages.error(request, 'Solo puedes reportar problemas cuando la prenda está en proceso de entrega.')
         return redirect('mis_transacciones')
@@ -773,16 +793,18 @@ def reportar_disputa(request, id_transaccion):
             messages.error(request, 'Debes proporcionar una descripción detallada del problema (mínimo 10 caracteres).')
             return redirect('mis_transacciones')
         
-        # Marcar transacción como EN_DISPUTA
-        transaccion.estado = 'EN_DISPUTA'
-        transaccion.en_disputa = True
-        transaccion.razon_disputa = razon.strip()
-        transaccion.reportado_por = usuario
-        transaccion.fecha_disputa = timezone.now()
-        transaccion.save()
-        
-        messages.success(request, 'Tu reporte ha sido registrado. El equipo de administración revisará la disputa.')
-        return redirect('mis_transacciones')
+        try:
+            transaccion.estado = 'EN_DISPUTA'
+            transaccion.en_disputa = True
+            transaccion.razon_disputa = razon.strip()
+            transaccion.reportado_por = usuario
+            transaccion.fecha_disputa = timezone.now()
+            transaccion.save()
+            messages.success(request, 'Tu reporte ha sido registrado. El equipo de administración revisará la disputa.')
+            return redirect('mis_transacciones')
+        except Exception as e:
+            logger.error(f"Error reportando disputa en transacción {transaccion.id}: {e}")
+            messages.error(request, 'Error interno. Intenta nuevamente.')
     
     context = {
         'usuario': usuario,
@@ -792,12 +814,8 @@ def reportar_disputa(request, id_transaccion):
 
 @admin_required
 def resolver_disputa(request, id_transaccion):
-    """Solo administrador: Resuelve una disputa marcándola como COMPLETADA o CANCELADA.
-    
-    Permite al admin revisar todos los detalles de la disputa y tomar una decisión
-    basada en la revisión del chat y pruebas proporcionadas.
-    """
-    transaccion = get_object_or_404(Transaccion, id_transaccion=id_transaccion)
+    """Solo administrador: Resuelve una disputa."""
+    transaccion = get_object_or_404(Transaccion.objects.select_related('prenda', 'user_origen', 'user_destino', 'reportado_por'), pk=id_transaccion)  # Cambiado: agregado select_related
     
     if transaccion.estado != 'EN_DISPUTA':
         messages.error(request, 'Esta transacción no está en disputa.')
@@ -810,19 +828,19 @@ def resolver_disputa(request, id_transaccion):
         if resolucion not in ['COMPLETADA', 'CANCELADA']:
             return JsonResponse({'error': 'Resolución inválida'}, status=400)
         
-        transaccion.estado = resolucion
-        transaccion.save()
-        
-        # TODO: Notificar a ambos usuarios sobre la resolución
-        # TODO: Si CANCELADA, posible penalización al vendedor
-        
-        messages.success(request, f'Disputa resuelta como {transaccion.get_estado_display()}')
-        return redirect('admin:index')
+        try:
+            transaccion.estado = resolucion
+            transaccion.save()
+            messages.success(request, f'Disputa resuelta como {transaccion.get_estado_display()}')
+            return redirect('admin:index')
+        except Exception as e:
+            logger.error(f"Error resolviendo disputa en transacción {transaccion.id}: {e}")
+            return JsonResponse({'error': 'Error interno'}, status=500)
     
     # Obtener mensajes entre los usuarios
     mensajes = Mensaje.objects.filter(
-        Q(id_emisor=transaccion.id_usuario_origen, id_receptor=transaccion.id_usuario_destino) |
-        Q(id_emisor=transaccion.id_usuario_destino, id_receptor=transaccion.id_usuario_origen)
+        Q(emisor=transaccion.user_origen, receptor=transaccion.user_destino) |  # Cambiado: 'emisor', 'receptor'
+        Q(emisor=transaccion.user_destino, receptor=transaccion.user_origen)
     ).order_by('fecha_envio')
     
     context = {
@@ -830,6 +848,7 @@ def resolver_disputa(request, id_transaccion):
         'mensajes': mensajes,
     }
     return render(request, 'admin_resolver_disputa.html', context)
+                   
 
 # ------------------------------------------------------------------------------------------------------------------
 # Mensajería entre usuarios
@@ -839,10 +858,10 @@ def lista_mensajes(request):
     """Vista de la lista de conversaciones del usuario."""
     usuario = get_usuario_actual(request)
     # Usuarios con los que hay intercambio de mensajes
-    enviados = Mensaje.objects.filter(id_emisor=usuario).values_list('id_receptor', flat=True)
-    recibidos = Mensaje.objects.filter(id_receptor=usuario).values_list('id_emisor', flat=True)
+    enviados = Mensaje.objects.filter(emisor=usuario).values_list('receptor', flat=True)  # Cambiado: 'emisor', 'receptor'
+    recibidos = Mensaje.objects.filter(receptor=usuario).values_list('emisor', flat=True)  # Cambiado: 'receptor', 'emisor'
     ids_conversaciones = set(list(enviados) + list(recibidos))
-    conversaciones = Usuario.objects.filter(id_usuario__in=ids_conversaciones)
+    conversaciones = Usuario.objects.filter(id__in=ids_conversaciones).select_related()  # Cambiado: 'id__in', agregado select_related
     context = {
         'usuario': usuario,
         'conversaciones': conversaciones,
@@ -853,12 +872,12 @@ def lista_mensajes(request):
 def conversacion(request, id_usuario):
     """Muestra la conversación entre el usuario y otro usuario específico."""
     usuario = get_usuario_actual(request)
-    otro_usuario = get_object_or_404(Usuario, id_usuario=id_usuario)
+    otro_usuario = get_object_or_404(Usuario, pk=id_usuario)  # Cambiado: 'pk=id_usuario'
     # Mensajes entre ambos (enviado/recibido)
     mensajes_conversacion = Mensaje.objects.filter(
-        Q(id_emisor=usuario, id_receptor=otro_usuario) |
-        Q(id_emisor=otro_usuario, id_receptor=usuario)
-    ).order_by('fecha_envio')
+        Q(emisor=usuario, receptor=otro_usuario) |  # Cambiado: 'emisor', 'receptor'
+        Q(emisor=otro_usuario, receptor=usuario)
+    ).order_by('fecha_envio').select_related('emisor', 'receptor')  # Agregado select_related
     context = {
         'usuario': usuario,
         'otro_usuario': otro_usuario,
@@ -875,18 +894,24 @@ def enviar_mensaje(request):
         contenido = request.POST.get('contenido')
         if not receptor_id or not contenido or len(contenido.strip()) < 2:
             return JsonResponse({'error': 'Datos incompletos.'}, status=400)
-        receptor = get_object_or_404(Usuario, id_usuario=receptor_id)
-        Mensaje.objects.create(
-            id_emisor=usuario,
-            id_receptor=receptor,
-            contenido=contenido.strip(),
-            fecha_envio=timezone.now()
-        )
-        messages.success(request, f'Mensaje enviado a {receptor.nombre}')
-        # Si usas AJAX:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True})
-        return redirect('conversacion', id_usuario=receptor.id_usuario)
+        try:
+            receptor = Usuario.objects.get(pk=receptor_id)  # Cambiado: 'pk=receptor_id'
+            Mensaje.objects.create(
+                emisor=usuario,  # Cambiado: 'emisor'
+                receptor=receptor,  # Cambiado: 'receptor'
+                contenido=contenido.strip(),
+                fecha_envio=timezone.now()
+            )
+            messages.success(request, f'Mensaje enviado a {receptor.nombre}')
+            # Si usas AJAX:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
+            return redirect('conversacion', id_usuario=receptor.pk)  # Cambiado: 'receptor.pk'
+        except Usuario.DoesNotExist:
+            return JsonResponse({'error': 'Receptor no encontrado.'}, status=404)
+        except Exception as e:
+            logger.error(f"Error enviando mensaje de {usuario.id} a {receptor_id}: {e}")
+            return JsonResponse({'error': 'Error interno.'}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -895,7 +920,7 @@ def enviar_mensaje(request):
 def lista_fundaciones(request):
     """Lista todas las fundaciones registradas."""
     usuario = get_usuario_actual(request)
-    fundaciones = Fundacion.objects.filter(activa=True)
+    fundaciones = Fundacion.objects.filter(activa=True).select_related('representante')  # Agregado select_related
     context = {
         'usuario': usuario,
         'fundaciones': fundaciones,
@@ -905,17 +930,17 @@ def lista_fundaciones(request):
 def detalle_fundacion(request, id_fundacion):
     """Muestra información y estadísticas de una fundación."""
     usuario = get_usuario_actual(request)
-    fundacion = get_object_or_404(Fundacion, id_fundacion=id_fundacion)
+    fundacion = get_object_or_404(Fundacion.objects.select_related('representante'), pk=id_fundacion)  # Cambiado: 'pk=id_fundacion', agregado select_related
     # Donaciones recibidas por la fundación, ordenadas por más recientes
     donaciones = Transaccion.objects.filter(
-        id_fundacion=fundacion,
-        id_tipo__nombre_tipo='Donación'
-    ).select_related('id_prenda', 'id_usuario_origen').order_by('-fecha_transaccion')
+        fundacion=fundacion,  # Cambiado: 'fundacion'
+        tipo__nombre_tipo='Donación'  # Cambiado: 'tipo__nombre_tipo'
+    ).select_related('prenda', 'user_origen').order_by('-fecha_transaccion')  # Cambiado: 'prenda', 'user_origen', agregado select_related
 
     # Impacto ambiental total de todas las prendas donadas a esta fundación
-    prendas_donadas = [don.id_prenda for don in donaciones if don.id_prenda]
+    prendas_donadas = [don.prenda for don in donaciones if don.prenda]  # Cambiado: 'don.prenda'
     impacto_total = ImpactoAmbiental.objects.filter(
-        id_prenda__in=prendas_donadas
+        prenda__in=prendas_donadas  # Cambiado: 'prenda__in'
     ).aggregate(
         total_carbono=Sum('carbono_evitar_kg'),
         total_energia=Sum('energia_ahorrada_kwh')
@@ -941,16 +966,16 @@ def panel_impacto(request):
         total_energia=Sum('energia_ahorrada_kwh')
     )
     total_transacciones = Transaccion.objects.count()
-    total_donaciones = Transaccion.objects.filter(id_tipo__nombre_tipo='Donación').count()
-    total_intercambios = Transaccion.objects.filter(id_tipo__nombre_tipo='Intercambio').count()
-    total_ventas = Transaccion.objects.filter(id_tipo__nombre_tipo='Venta').count()
+    total_donaciones = Transaccion.objects.filter(tipo__nombre_tipo='Donación').count()  # Cambiado: 'tipo__nombre_tipo'
+    total_intercambios = Transaccion.objects.filter(tipo__nombre_tipo='Intercambio').count()  # Cambiado: 'tipo__nombre_tipo'
+    total_ventas = Transaccion.objects.filter(tipo__nombre_tipo='Venta').count()  # Cambiado: 'tipo__nombre_tipo'
 
     usuarios_activos = Usuario.objects.annotate(
-        num_transacciones=Count('transaccion_id_usuario_origen_set')
+        num_transacciones=Count('transacciones_origen')  # Cambiado: 'transacciones_origen' (related_name)
     ).order_by('-num_transacciones')[:5]
 
     fundaciones_top = Fundacion.objects.annotate(
-        num_donaciones=Count('transaccion')
+        num_donaciones=Count('transacciones')  # Cambiado: 'transacciones' (related_name)
     ).order_by('-num_donaciones')[:5]
 
     context = {
@@ -973,20 +998,20 @@ def mi_impacto(request):
         messages.error(request, 'Debes iniciar sesión.')
         return redirect('login')
     mis_transacciones = Transaccion.objects.filter(
-        Q(id_usuario_origen=usuario) | Q(id_usuario_destino=usuario)
-    ).select_related('id_prenda', 'id_tipo', 'id_usuario_origen', 'id_usuario_destino', 'id_fundacion')
+        Q(user_origen=usuario) | Q(user_destino=usuario)  # Cambiado: 'user_origen', 'user_destino'
+    ).select_related('prenda', 'tipo', 'user_origen', 'user_destino', 'fundacion')  # Cambiado: nombres, agregado select_related
 
-    prendas_ids = [t.id_prenda.id_prenda for t in mis_transacciones]
+    prendas_ids = [t.prenda.pk for t in mis_transacciones if t.prenda]  # Cambiado: 't.prenda.pk'
     mi_impacto_total = ImpactoAmbiental.objects.filter(
-        id_prenda__id_prenda__in=prendas_ids
+        prenda__pk__in=prendas_ids  # Cambiado: 'prenda__pk__in'
     ).aggregate(
         total_carbono=Sum('carbono_evitar_kg'),
         total_energia=Sum('energia_ahorrada_kwh')
     )
 
-    donaciones = mis_transacciones.filter(id_tipo__nombre_tipo='Donación').count()
-    intercambios = mis_transacciones.filter(id_tipo__nombre_tipo='Intercambio').count()
-    ventas = mis_transacciones.filter(id_tipo__nombre_tipo='Venta').count()
+    donaciones = mis_transacciones.filter(tipo__nombre_tipo='Donación').count()  # Cambiado: 'tipo__nombre_tipo'
+    intercambios = mis_transacciones.filter(tipo__nombre_tipo='Intercambio').count()  # Cambiado: 'tipo__nombre_tipo'
+    ventas = mis_transacciones.filter(tipo__nombre_tipo='Venta').count()  # Cambiado: 'tipo__nombre_tipo'
 
     context = {
         'usuario': usuario,
@@ -998,6 +1023,7 @@ def mi_impacto(request):
         'transacciones_recientes': mis_transacciones.order_by('-fecha_transaccion')[:10],
     }
     return render(request, 'mi_impacto.html', context)
+
 
 # ------------------------------------------------------------------------------------------------------------------
 # Información y gestión de sesión
@@ -1015,18 +1041,19 @@ def session_info(request):
 
     if (not usuario_nombre or not usuario_correo) and usuario_id:
         try:
-            u = Usuario.objects.only('nombre', 'correo').get(id_usuario=usuario_id)
+            u = Usuario.objects.only('nombre', 'correo').get(id=usuario_id)  # Cambiado: 'id=usuario_id'
             usuario_nombre = u.nombre
             usuario_correo = u.correo
             request.session['usuario_nombre'] = usuario_nombre
             request.session['usuario_correo'] = usuario_correo
         except Usuario.DoesNotExist:
+            logger.warning(f"Usuario con ID {usuario_id} no encontrado en session_info")
             usuario_nombre = None
             usuario_correo = None
 
     # Información de la sesión
     session_data = {
-        'session_key': request.session.session_key,
+        'session_key': (request.session.session_key or '')[:10] + '...' if request.session.session_key else 'N/A',  # Limitado para seguridad
         'usuario_id': usuario_id,
         'usuario_nombre': usuario_nombre,
         'usuario_correo': usuario_correo,
@@ -1035,17 +1062,25 @@ def session_info(request):
     # Timestamp de login
     login_timestamp = request.session.get('login_timestamp')
     if login_timestamp:
-        login_dt = datetime.fromisoformat(login_timestamp)
-        session_data['login_timestamp'] = login_dt.strftime('%d/%m/%Y %H:%M:%S')
-        session_data['tiempo_sesion'] = str(timezone.now() - login_dt)
+        try:
+            login_dt = datetime.fromisoformat(login_timestamp)
+            session_data['login_timestamp'] = login_dt.strftime('%d/%m/%Y %H:%M:%S')
+            session_data['tiempo_sesion'] = str(timezone.now() - login_dt)
+        except ValueError:
+            logger.error(f"Error parseando login_timestamp: {login_timestamp}")
+            session_data['login_timestamp'] = 'Error'
 
     # Última actividad
     ultima_actividad = request.session.get('ultima_actividad')
     if ultima_actividad:
-        ultima_dt = datetime.fromisoformat(ultima_actividad)
-        session_data['ultima_actividad'] = ultima_dt.strftime('%d/%m/%Y %H:%M:%S')
-        tiempo_inactivo = (timezone.now() - ultima_dt).total_seconds()
-        session_data['tiempo_inactivo'] = f"{int(tiempo_inactivo)} segundos"
+        try:
+            ultima_dt = datetime.fromisoformat(ultima_actividad)
+            session_data['ultima_actividad'] = ultima_dt.strftime('%d/%m/%Y %H:%M:%S')
+            tiempo_inactivo = (timezone.now() - ultima_dt).total_seconds()
+            session_data['tiempo_inactivo'] = f"{int(tiempo_inactivo)} segundos"
+        except ValueError:
+            logger.error(f"Error parseando ultima_actividad: {ultima_actividad}")
+            session_data['ultima_actividad'] = 'Error'
 
     # Expiración de la sesión
     expiry = request.session.get_expiry_age()
@@ -1071,19 +1106,23 @@ def session_status(request):
     ultima_actividad = request.session.get('ultima_actividad')
     tiempo_restante = None
     if ultima_actividad:
-        ultima_dt = datetime.fromisoformat(ultima_actividad)
-        tiempo_inactivo = (timezone.now() - ultima_dt).total_seconds()
-        tiempo_restante = max(0, 1800 - int(tiempo_inactivo))  # 1800 segundos = 30 minutos
+        try:
+            ultima_dt = datetime.fromisoformat(ultima_actividad)
+            tiempo_inactivo = (timezone.now() - ultima_dt).total_seconds()
+            tiempo_restante = max(0, 1800 - int(tiempo_inactivo))  # 1800 segundos = 30 minutos
+        except ValueError:
+            logger.error(f"Error parseando ultima_actividad en session_status: {ultima_actividad}")
 
     # Asegurar nombre desde DB si no está en la sesión
     usuario_id = request.session.get('usuario_id')
     usuario_nombre = request.session.get('usuario_nombre')
     if (not usuario_nombre) and usuario_id:
         try:
-            u = Usuario.objects.only('nombre').get(id_usuario=usuario_id)
+            u = Usuario.objects.only('nombre').get(id=usuario_id)  # Cambiado: 'id=usuario_id'
             usuario_nombre = u.nombre
             request.session['usuario_nombre'] = usuario_nombre
         except Usuario.DoesNotExist:
+            logger.warning(f"Usuario con ID {usuario_id} no encontrado en session_status")
             usuario_nombre = None
 
     return JsonResponse({
@@ -1091,7 +1130,7 @@ def session_status(request):
         'usuario_id': usuario_id,
         'usuario_nombre': usuario_nombre,
         'tiempo_restante': tiempo_restante,
-        'session_key': (request.session.session_key or '')[:10] + '...'
+        'session_key': (request.session.session_key or '')[:10] + '...' if request.session.session_key else 'N/A'  # Limitado para seguridad
     })
 
 
@@ -1099,15 +1138,19 @@ def session_status(request):
 def renovar_sesion(request):
     """Renueva la sesión y actualiza el timestamp de última actividad"""
     if request.method == 'POST':
-        request.session['ultima_actividad'] = timezone.now().isoformat()
-        request.session.modified = True
-        if not request.session.get('login_timestamp'):
-            request.session['login_timestamp'] = timezone.now().isoformat()
-        return JsonResponse({
-            'success': True,
-            'message': 'Sesión renovada',
-            'nueva_expiracion': request.session.get_expiry_age()
-        })
+        try:
+            request.session['ultima_actividad'] = timezone.now().isoformat()
+            request.session.modified = True
+            if not request.session.get('login_timestamp'):
+                request.session['login_timestamp'] = timezone.now().isoformat()
+            return JsonResponse({
+                'success': True,
+                'message': 'Sesión renovada',
+                'nueva_expiracion': request.session.get_expiry_age()
+            })
+        except Exception as e:
+            logger.error(f"Error renovando sesión para usuario {request.session.get('usuario_id')}: {e}")
+            return JsonResponse({'error': 'Error interno'}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -1120,57 +1163,65 @@ def configurar_cookies(request):
 def aceptar_cookies(request):
     """Acepta todas las cookies, con preferencias personalizadas si se envían."""
     if request.method == 'POST':
-        preferencias = {
-            'esenciales': True,  # Siempre activadas
-            'funcionalidad': request.POST.get('funcionalidad', 'true') == 'true',
-            'analiticas': request.POST.get('analiticas', 'true') == 'true',
-            'marketing': request.POST.get('marketing', 'true') == 'true',
-            'fecha_aceptacion': timezone.now().isoformat(),
-        }
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            response = JsonResponse({
-                'success': True,
-                'message': 'Preferencias de cookies guardadas',
-                'preferencias': preferencias
-            })
-        else:
-            response = redirect('home')
-        response.set_cookie(
-            'cookie_consent',
-            json.dumps(preferencias),
-            max_age=365*24*60*60,  # 1 año
-            httponly=False,  # Accesible desde JS
-            samesite='Lax'
-        )
-        return response
+        try:
+            preferencias = {
+                'esenciales': True,  # Siempre activadas
+                'funcionalidad': request.POST.get('funcionalidad', 'true') == 'true',
+                'analiticas': request.POST.get('analiticas', 'true') == 'true',
+                'marketing': request.POST.get('marketing', 'true') == 'true',
+                'fecha_aceptacion': timezone.now().isoformat(),
+            }
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                response = JsonResponse({
+                    'success': True,
+                    'message': 'Preferencias de cookies guardadas',
+                    'preferencias': preferencias
+                })
+            else:
+                response = redirect('home')
+            response.set_cookie(
+                'cookie_consent',
+                json.dumps(preferencias),
+                max_age=365*24*60*60,  # 1 año
+                httponly=False,  # Accesible desde JS
+                samesite='Lax'
+            )
+            return response
+        except Exception as e:
+            logger.error(f"Error aceptando cookies: {e}")
+            return JsonResponse({'error': 'Error interno'}, status=500)
     return redirect('configurar_cookies')
 
 def rechazar_cookies(request):
     """Rechaza cookies no esenciales y guarda la preferencia mínima."""
     if request.method == 'POST':
-        preferencias = {
-            'esenciales': True,
-            'funcionalidad': False,
-            'analiticas': False,
-            'marketing': False,
-            'fecha_rechazo': timezone.now().isoformat(),
-        }
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            response = JsonResponse({
-                'success': True,
-                'message': 'Solo se usarán cookies esenciales',
-                'preferencias': preferencias
-            })
-        else:
-            response = redirect('home')
-        response.set_cookie(
-            'cookie_consent',
-            json.dumps(preferencias),
-            max_age=365*24*60*60,
-            httponly=False,
-            samesite='Lax'
-        )
-        return response
+        try:
+            preferencias = {
+                'esenciales': True,
+                'funcionalidad': False,
+                'analiticas': False,
+                'marketing': False,
+                'fecha_rechazo': timezone.now().isoformat(),
+            }
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                response = JsonResponse({
+                    'success': True,
+                    'message': 'Solo se usarán cookies esenciales',
+                    'preferencias': preferencias
+                })
+            else:
+                response = redirect('home')
+            response.set_cookie(
+                'cookie_consent',
+                json.dumps(preferencias),
+                max_age=365*24*60*60,
+                httponly=False,
+                samesite='Lax'
+            )
+            return response
+        except Exception as e:
+            logger.error(f"Error rechazando cookies: {e}")
+            return JsonResponse({'error': 'Error interno'}, status=500)
     return redirect('configurar_cookies')
 
 def obtener_preferencias_cookies(request):
@@ -1184,7 +1235,7 @@ def obtener_preferencias_cookies(request):
                 'preferencias': preferencias
             })
         except json.JSONDecodeError:
-            pass
+            logger.warning(f"Error decodificando cookie_consent: {cookie_consent}")
     return JsonResponse({
         'configurado': False,
         'preferencias': None
@@ -1193,17 +1244,22 @@ def obtener_preferencias_cookies(request):
 def eliminar_cookies(request):
     """Elimina cookies no esenciales y restablece preferencias."""
     if request.method == 'POST':
-        response = JsonResponse({
-            'success': True,
-            'message': 'Cookies eliminadas. Por favor configura tus preferencias nuevamente.'
-        })
-        response.delete_cookie('cookie_consent')
-        # Eliminar todas menos las esenciales (puedes adaptar la lista de esenciales a tu configuración)
-        for cookie_name in list(request.COOKIES.keys()):
-            if cookie_name not in ['csrftoken', 'sessionid', 'ecoprendas_sessionid']:
-                response.delete_cookie(cookie_name)
-        return response
+        try:
+            response = JsonResponse({
+                'success': True,
+                'message': 'Cookies eliminadas. Por favor configura tus preferencias nuevamente.'
+            })
+            response.delete_cookie('cookie_consent')
+            # Eliminar todas menos las esenciales (puedes adaptar la lista de esenciales a tu configuración)
+            for cookie_name in list(request.COOKIES.keys()):
+                if cookie_name not in ['csrftoken', 'sessionid', 'ecoprendas_sessionid']:
+                    response.delete_cookie(cookie_name)
+            return response
+        except Exception as e:
+            logger.error(f"Error eliminando cookies: {e}")
+            return JsonResponse({'error': 'Error interno'}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
+
 
 # ------------------------------------------------------------------------------------------------------------------
 # Panel y gestión de fundaciones
@@ -1669,14 +1725,14 @@ def mapa_fundaciones(request):
         activa=True,
         lat__isnull=False,
         lng__isnull=False
-    ).values('id_fundacion', 'nombre', 'direccion', 'lat', 'lng', 'telefono', 'correo_contacto')
-    
+    ).values('id', 'nombre', 'direccion', 'lat', 'lng', 'telefono', 'correo_contacto')
+
     # Obtener usuarios que aceptaron mostrar su ubicación
     usuarios_visibles = Usuario.objects.filter(
         mostrar_en_mapa=True,
         lat__isnull=False,
         lng__isnull=False
-    ).values('id_usuario', 'nombre', 'comuna', 'lat', 'lng')
+    ).values('id', 'nombre', 'comuna', 'lat', 'lng')
     
     # Convertir QuerySets a listas para JSON
     fundaciones_list = list(fundaciones)
@@ -2128,7 +2184,7 @@ def crear_prenda(request):
         
         # Crear prenda
         prenda = Prenda.objects.create(
-            id_usuario=usuario,
+            user=usuario,
             nombre=nombre,
             descripcion=descripcion,
             categoria=categoria,
