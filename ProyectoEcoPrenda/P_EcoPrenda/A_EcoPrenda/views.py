@@ -87,10 +87,10 @@ def verificar_password(password, password_hash, usuario=None):
 
 def get_usuario_actual(request):
     """Obtiene el usuario actual de la sesión"""
-    usuario_id = request.session.get('usuario_id')
-    if usuario_id:
+    id_usuario = request.session.get('id_usuario')
+    if id_usuario:
         try:
-            return Usuario.objects.get(id=usuario_id)  # Cambiado: usa 'id' en lugar de 'id_usuario'
+            return Usuario.objects.get(id=id_usuario)  # Cambiado: usa 'id' en lugar de 'id_usuario'
         except Usuario.DoesNotExist:
             return None
     return None
@@ -172,7 +172,7 @@ def login_usuario(request):
         try:
             usuario = Usuario.objects.get(correo=correo)
             if verificar_password(contrasena, usuario.contrasena, usuario):
-                request.session['usuario_id'] = usuario.id_usuario  # Cambiado: 'id' en lugar de 'id_usuario'
+                request.session['id_usuario'] = usuario.id_usuario  # Cambiado: 'id' en lugar de 'id_usuario'
                 messages.success(request, f'¡Bienvenido, {usuario.nombre}!')
                 return redirect('home')
             else:
@@ -1035,26 +1035,26 @@ def session_info(request):
     from datetime import datetime
 
     # Recuperar/asegurar nombre y correo en sesión
-    usuario_id = request.session.get('usuario_id')
+    id_usuario = request.session.get('id_usuario')
     usuario_nombre = request.session.get('usuario_nombre')
     usuario_correo = request.session.get('usuario_correo')
 
-    if (not usuario_nombre or not usuario_correo) and usuario_id:
+    if (not usuario_nombre or not usuario_correo) and id_usuario:
         try:
-            u = Usuario.objects.only('nombre', 'correo').get(id=usuario_id)  # Cambiado: 'id=usuario_id'
+            u = Usuario.objects.only('nombre', 'correo').get(id=id_usuario) 
             usuario_nombre = u.nombre
             usuario_correo = u.correo
             request.session['usuario_nombre'] = usuario_nombre
             request.session['usuario_correo'] = usuario_correo
         except Usuario.DoesNotExist:
-            logger.warning(f"Usuario con ID {usuario_id} no encontrado en session_info")
+            logger.warning(f"Usuario con ID {id_usuario} no encontrado en session_info")
             usuario_nombre = None
             usuario_correo = None
 
     # Información de la sesión
     session_data = {
         'session_key': (request.session.session_key or '')[:10] + '...' if request.session.session_key else 'N/A',  # Limitado para seguridad
-        'usuario_id': usuario_id,
+        'id_usuario': id_usuario,
         'usuario_nombre': usuario_nombre,
         'usuario_correo': usuario_correo,
     }
@@ -1114,20 +1114,20 @@ def session_status(request):
             logger.error(f"Error parseando ultima_actividad en session_status: {ultima_actividad}")
 
     # Asegurar nombre desde DB si no está en la sesión
-    usuario_id = request.session.get('usuario_id')
+    id_usuario = request.session.get('id_usuario')
     usuario_nombre = request.session.get('usuario_nombre')
-    if (not usuario_nombre) and usuario_id:
+    if (not usuario_nombre) and id_usuario:
         try:
-            u = Usuario.objects.only('nombre').get(id=usuario_id)  # Cambiado: 'id=usuario_id'
+            u = Usuario.objects.only('nombre').get(id=id_usuario)  
             usuario_nombre = u.nombre
             request.session['usuario_nombre'] = usuario_nombre
         except Usuario.DoesNotExist:
-            logger.warning(f"Usuario con ID {usuario_id} no encontrado en session_status")
+            logger.warning(f"Usuario con ID {id_usuario} no encontrado en session_status")
             usuario_nombre = None
 
     return JsonResponse({
         'autenticado': True,
-        'usuario_id': usuario_id,
+        'id_usuario': id_usuario,
         'usuario_nombre': usuario_nombre,
         'tiempo_restante': tiempo_restante,
         'session_key': (request.session.session_key or '')[:10] + '...' if request.session.session_key else 'N/A'  # Limitado para seguridad
@@ -1149,7 +1149,7 @@ def renovar_sesion(request):
                 'nueva_expiracion': request.session.get_expiry_age()
             })
         except Exception as e:
-            logger.error(f"Error renovando sesión para usuario {request.session.get('usuario_id')}: {e}")
+            logger.error(f"Error renovando sesión para usuario {request.session.get('id_usuario')}: {e}")
             return JsonResponse({'error': 'Error interno'}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 

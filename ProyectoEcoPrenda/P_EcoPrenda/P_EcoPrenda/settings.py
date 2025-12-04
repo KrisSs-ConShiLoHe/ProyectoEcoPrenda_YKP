@@ -14,8 +14,8 @@ from pathlib import Path
 import os
 import dj_database_url
 from dotenv import load_dotenv
-import pymysql
-pymysql.install_as_MySQLdb()
+# import pymysql
+# pymysql.install_as_MySQLdb()
 # Configuración adicional de Cloudinary
 import cloudinary
 import cloudinary.uploader
@@ -41,7 +41,7 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # Cambia a False en producción
 
-ALLOWED_HOSTS = ['10.58.32.143', '127.0.0.1', 'localhost', 'proyectoecoprenda-ykp.onrender.com']
+ALLOWED_HOSTS = ['', '127.0.0.1', 'localhost', 'proyectoecoprenda-ykp.onrender.com']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://proyectoecoprenda-ykp.onrender.com'
@@ -98,21 +98,47 @@ WSGI_APPLICATION = 'P_EcoPrenda.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-# PostgreSQL (Principal)
+# PostgreSQL (Principal) - Configuración manual
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.environ.get('DB_NAME'),
+#         'USER': os.environ.get('DB_USER'),
+#         'PASSWORD': os.environ.get('DB_PASSWORD'),
+#         'HOST': os.environ.get('DB_HOST'),
+#         'PORT': os.environ.get('DB_PORT', '5432'),
+#         'OPTIONS': {
+#             'sslmode': 'require',
+#             'connect_timeout': 10,
+#         },
+#     }
+# }
+
+# # MySQL (Secundaria)
+# DATABASES['mysql_db'] = dj_database_url.config(
+#     default=os.environ.get('MYSQL_ADDON_URI'),
+#     conn_max_age=600
+# )
+
+# DATABASE_ROUTERS = ['P_EcoPrenda.db_routers.AppRouter']
+
+# PostgreSQL (Principal) - Configuración por URL
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DB_URL'),
-        conn_max_age=600  # Opcional: para persistencia de conexión
+        conn_max_age=0,
+        conn_health_checks=True,  # Opcional: verifica conexiones
+        ssl_require=True
     )
 }
 
-# MySQL (Secundaria) - Mantengo intacto para aprendizaje y requerimiento
-DATABASES['mysql_db'] = dj_database_url.config(
-    default=os.environ.get('MYSQL_ADDON_URI'),
-    conn_max_age=600
-)
+# # MySQL (Secundaria)
+# DATABASES['mysql_db'] = dj_database_url.config(
+#     default=os.environ.get('MYSQL_ADDON_URI'),
+#     conn_max_age=600
+# )
 
-DATABASE_ROUTERS = ['P_EcoPrenda.db_routers.AppRouter']
+# DATABASE_ROUTERS = ['P_EcoPrenda.db_routers.AppRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -257,7 +283,7 @@ cloudinary.config(
 )
 
 # Validación final: Asegura que claves críticas estén presentes (opcional, para debugging)
-required_env_vars = ['DB_URL', 'MYSQL_ADDON_URI']  # Agrega más si necesitas
+required_env_vars = ['DB_URL']  # Agrega más si necesitas
 for var in required_env_vars:
     if not os.environ.get(var):
         raise ValueError(f"{var} no está definida en .env")
