@@ -81,7 +81,7 @@ def verificar_password(password, password_hash, usuario=None):
                 usuario.contrasena = make_password(password)
                 usuario.save()
             except Exception as e:
-                logger.error(f"Error rehasheando contraseña para usuario {usuario.id}: {e}")
+                logger.error(f"Error rehasheando contraseña para usuario {usuario.id_usuario}: {e}")
         return True
     return False
 
@@ -103,14 +103,14 @@ def puede_actualizar_transaccion(usuario, transaccion, permiso_requerido):
     Retorna tupla: (True/False, mensaje_error o None)
     """
     if permiso_requerido == 'origen':
-        if transaccion.user_origen.id != usuario.id:  # Cambiado: 'user_origen' en lugar de 'id_usuario_origen'
+        if transaccion.user_origen.id != usuario.id_usuario:  # Cambiado: 'user_origen' en lugar de 'id_usuario_origen'
             return False, 'Solo el propietario/vendedor puede realizar esta acción.'
     elif permiso_requerido == 'destino':
-        if not transaccion.user_destino or transaccion.user_destino.id != usuario.id:  # Cambiado: 'user_destino'
+        if not transaccion.user_destino or transaccion.user_destino.id != usuario.id_usuario:  # Cambiado: 'user_destino'
             return False, 'Solo el receptor/comprador puede realizar esta acción.'
     elif permiso_requerido == 'origen_o_destino':
-        es_origen = transaccion.user_origen.id == usuario.id
-        es_destino = transaccion.user_destino and transaccion.user_destino.id == usuario.id
+        es_origen = transaccion.user_origen.id == usuario.id_usuario
+        es_destino = transaccion.user_destino and transaccion.user_destino.id == usuario.id_usuario
         if not (es_origen or es_destino):
             return False, 'No tienes permiso para actualizar esta transacción.'
     elif permiso_requerido == 'representante':
@@ -172,7 +172,7 @@ def login_usuario(request):
         try:
             usuario = Usuario.objects.get(correo=correo)
             if verificar_password(contrasena, usuario.contrasena, usuario):
-                request.session['usuario_id'] = usuario.id  # Cambiado: 'id' en lugar de 'id_usuario'
+                request.session['usuario_id'] = usuario.id_usuario  # Cambiado: 'id' en lugar de 'id_usuario'
                 messages.success(request, f'¡Bienvenido, {usuario.nombre}!')
                 return redirect('home')
             else:
@@ -208,7 +208,7 @@ def perfil_usuario(request):
                 messages.success(request, 'Perfil actualizado correctamente.')
                 return redirect('perfil')
             except Exception as e:
-                logger.error(f"Error actualizando perfil para usuario {usuario.id}: {e}")
+                logger.error(f"Error actualizando perfil para usuario {usuario.id_usuario}: {e}")
                 messages.error(request, 'Error interno. Intenta nuevamente.')
         else:
             for error in form.errors.values():
@@ -448,7 +448,7 @@ def proponer_intercambio(request, id_prenda):
     usuario = get_usuario_actual(request)
     prenda_destino = get_object_or_404(Prenda.objects.select_related('user'), pk=id_prenda)  # Cambiado: 'pk=id_prenda', agregado select_related
 
-    if prenda_destino.user.id == usuario.id:  # Cambiado: 'prenda_destino.user.id == usuario.id'
+    if prenda_destino.user.id == usuario.id_usuario:  # Cambiado: 'prenda_destino.user.id == usuario.id'
         messages.error(request, 'No puedes intercambiar con tu propia prenda.')
         return redirect('detalle_prenda', id_prenda=id_prenda)
     if prenda_destino.estado != 'DISPONIBLE':  # Cambiado: check directo en 'estado'
@@ -476,7 +476,7 @@ def proponer_intercambio(request, id_prenda):
             messages.success(request, f'¡Intercambio propuesto! Código de seguimiento: {transaccion.id}. Ahora puedes negociar con el otro usuario.')  # Cambiado: 'transaccion.id'
             return redirect('conversacion', id_usuario=prenda_destino.user.id)  # Cambiado: 'prenda_destino.user.id'
         except Exception as e:
-            logger.error(f"Error creando intercambio para usuario {usuario.id}: {e}")
+            logger.error(f"Error creando intercambio para usuario {usuario.id_usuario}: {e}")
             messages.error(request, 'Error interno. Intenta nuevamente.')
 
     mis_prendas_usuario = Prenda.objects.filter(user=usuario, estado='DISPONIBLE')  # Cambiado: 'user=usuario', 'estado'
@@ -550,7 +550,7 @@ def comprar_prenda(request, id_prenda):
     usuario = get_usuario_actual(request)
     prenda = get_object_or_404(Prenda.objects.select_related('user'), pk=id_prenda)  # Cambiado: agregado select_related
     
-    if prenda.user.id == usuario.id:  # Cambiado: 'prenda.user.id == usuario.id'
+    if prenda.user.id == usuario.id_usuario:  # Cambiado: 'prenda.user.id == usuario.id'
         messages.error(request, "No puedes comprar tu propia prenda.")
         return redirect('detalle_prenda', id_prenda=id_prenda)
     if prenda.estado != 'DISPONIBLE':  # Cambiado: check directo
@@ -573,7 +573,7 @@ def comprar_prenda(request, id_prenda):
             messages.success(request, f'Solicitud de compra enviada. Código: {transaccion.id}. Ahora puedes negociar con el vendedor.')  # Cambiado: 'transaccion.id'
             return redirect('conversacion', id_usuario=prenda.user.id)  # Cambiado: 'prenda.user.id'
         except Exception as e:
-            logger.error(f"Error creando compra para usuario {usuario.id}: {e}")
+            logger.error(f"Error creando compra para usuario {usuario.id_usuario}: {e}")
             messages.error(request, 'Error interno. Intenta nuevamente.')
     
     context = {"usuario": usuario, "prenda": prenda}
@@ -663,7 +663,7 @@ def donar_prenda(request, id_prenda):
     """Permite a un usuario donar una prenda propia a una fundación activa."""
     usuario = get_usuario_actual(request)
     prenda = get_object_or_404(Prenda.objects.select_related('user'), pk=id_prenda)  # Cambiado: agregado select_related
-    if prenda.user.id != usuario.id:  # Cambiado: 'prenda.user.id != usuario.id'
+    if prenda.user.id != usuario.id_usuario:  # Cambiado: 'prenda.user.id != usuario.id'
         messages.error(request, 'Solo puedes donar tus propias prendas.')
         return redirect('detalle_prenda', id_prenda=id_prenda)
     if prenda.estado != 'DISPONIBLE':  # Cambiado: check directo
@@ -696,7 +696,7 @@ def donar_prenda(request, id_prenda):
             messages.success(request, f'¡Prenda donada exitosamente a {fundacion.nombre}! Código de seguimiento: {transaccion.id}')  # Cambiado: 'transaccion.id'
             return redirect('mis_transacciones')
         except Exception as e:
-            logger.error(f"Error donando prenda {prenda.pk} por usuario {usuario.id}: {e}")
+            logger.error(f"Error donando prenda {prenda.pk} por usuario {usuario.id_usuario}: {e}")
             messages.error(request, 'Error interno. Intenta nuevamente.')
     fundaciones = Fundacion.objects.filter(activa=True)
     context = {
@@ -732,8 +732,8 @@ def actualizar_estado_transaccion(request, id_transaccion):
     """Permite actualizar el estado de una transacción."""
     usuario = get_usuario_actual(request)
     transaccion = get_object_or_404(Transaccion.objects.select_related('prenda', 'user_destino', 'user_origen'), pk=id_transaccion)  # Cambiado: agregado select_related
-    if transaccion.user_destino and transaccion.user_destino.id != usuario.id:  # Cambiado: 'user_destino'
-        if transaccion.user_origen.id != usuario.id:  # Cambiado: 'user_origen'
+    if transaccion.user_destino and transaccion.user_destino.id != usuario.id_usuario:  # Cambiado: 'user_destino'
+        if transaccion.user_origen.id != usuario.id_usuario:  # Cambiado: 'user_origen'
             return JsonResponse({'error': 'No autorizado'}, status=403)
     
     if request.method == 'POST':
@@ -779,7 +779,7 @@ def reportar_disputa(request, id_transaccion):
     usuario = get_usuario_actual(request)
     transaccion = get_object_or_404(Transaccion.objects.select_related('prenda', 'user_destino'), pk=id_transaccion)  # Cambiado: agregado select_related
     
-    if not transaccion.user_destino or transaccion.user_destino.id != usuario.id:  # Cambiado: 'user_destino'
+    if not transaccion.user_destino or transaccion.user_destino.id != usuario.id_usuario:  # Cambiado: 'user_destino'
         messages.error(request, 'Solo el receptor puede reportar problemas.')
         return redirect('mis_transacciones')
     
@@ -910,7 +910,7 @@ def enviar_mensaje(request):
         except Usuario.DoesNotExist:
             return JsonResponse({'error': 'Receptor no encontrado.'}, status=404)
         except Exception as e:
-            logger.error(f"Error enviando mensaje de {usuario.id} a {receptor_id}: {e}")
+            logger.error(f"Error enviando mensaje de {usuario.id_usuario} a {receptor_id}: {e}")
             return JsonResponse({'error': 'Error interno.'}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
