@@ -336,7 +336,7 @@ class Transaccion(models.Model):
             return (usuario.es_representante_fundacion() and 
                     usuario.fundacion_asignada == self.fundacion)
         if self.user_destino:
-            return usuario.id == self.user_destino.id
+            return usuario.id_usuario == self.user_destino.id
         return False
 
     # (Los demás métodos de permisos siguen similares; omite por brevedad, pero ajusta nombres de campos).
@@ -500,3 +500,4 @@ class CampanaFundacion(models.Model):
         if self.fecha_fin and self.fecha_inicio >= self.fecha_fin:
             raise ValueError("La fecha de fin debe ser posterior a la fecha de inicio.")
         super().save(*args, **kwargs)
+ 
