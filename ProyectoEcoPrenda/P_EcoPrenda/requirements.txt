@@ -10,3 +10,4 @@ django-cloudinary-storage==0.3.0
 requests==2.32.4
 boto3==1.42.0
 cloudinary==1.44.1
+cryptography==46.0.3

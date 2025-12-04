@@ -90,4 +90,12 @@ urlpatterns = [
     path('mapa/', views.mapa_fundaciones, name='mapa_fundaciones'),
     path('perfil/actualizar-ubicacion/', views.actualizar_ubicacion_usuario, name='actualizar_ubicacion_usuario'),
     path('fundacion/<int:id_fundacion>/actualizar-ubicacion/', views.actualizar_ubicacion_fundacion, name='actualizar_ubicacion_fundacion'),
+
+    # Galería de imágenes
+    path('galeria/', views.galeria_imagenes, name='galeria_imagenes'),
+
+    # Impacto Ambiental
+    path('informe-impacto/', views.informe_impacto, name='informe_impacto'),
+    path('comparador-impacto/', views.comparador_impacto, name='comparador_impacto'),
+    path('api/calcular-impacto/', views.api_calcular_impacto, name='api_calcular_impacto'),
 ]

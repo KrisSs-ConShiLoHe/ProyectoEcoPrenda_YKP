@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Comparador de Impacto - EcoPrenda{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/comparador_impacto.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4">
+            <i class="bi bi-bar-chart-line"></i> Comparador de Impacto
+        </h1>
+        <p class="lead text-muted">
+            Compara el impacto ambiental de reutilizar diferentes tipos de prendas
+        </p>
+    </div>
+    
+    <!-- Gráfico de Comparación -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up"></i> CO₂ Evitado por Categoría
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="impactChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cards de Comparación -->
+    <div class="row">
+        {% for item in categorias_impacto %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="comparison-card">
+                <i class="bi 
+                    {% if item.categoria == 'Camiseta' %}bi-badge{% endif %}
+                    {% if item.categoria == 'Pantalón' %}bi-back{% endif %}
+                    {% if item.categoria == 'Vestido' %}bi-person-dress{% endif %}
+                    {% if item.categoria == 'Chaqueta' %}bi-jacket{% endif %}
+                    {% if item.categoria == 'Zapatos' %}bi-boot{% endif %}
+                    {% if item.categoria == 'Accesorios' %}bi-bag{% endif %}
+                    category-icon
+                "></i>
+                
+                <h3>{{ item.categoria }}</h3>
+                
+                <div class="mt-4">
+                    <div class="metric-row">
+                        <span class="metric-label">
+                            <i class="bi bi-cloud"></i> CO₂
+                        </span>
+                        <span class="metric-value">{{ item.carbono }} kg</span>
+                    </div>
+                    
+                    <div class="metric-row">
+                        <span class="metric-label">
+                            <i class="bi bi-lightning"></i> Energía
+                        </span>
+                        <span class="metric-value">{{ item.energia }} kWh</span>
+                    </div>
+                    
+                    <div class="metric-row">
+                        <span class="metric-label">
+                            <i class="bi bi-droplet"></i> Agua
+                        </span>
+                        <span class="metric-value">{{ item.agua }} L</span>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <small class="text-muted">
+                        Impacto evitado al reutilizar una unidad
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Información Adicional -->
+    <div class="row mt-5">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> ¿Cómo se calculan estos valores?
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        Los valores mostrados son promedios basados en estudios de la industria textil 
+                        que consideran:
+                    </p>
+                    <ul>
+                        <li><strong>CO₂:</strong> Emisiones de gases de efecto invernadero en la producción</li>
+                        <li><strong>Energía:</strong> Consumo eléctrico en manufactura y procesamiento</li>
+                        <li><strong>Agua:</strong> Litros utilizados en cultivo, tintura y acabado</li>
+                    </ul>
+                    <p class="mb-0">
+                        <small class="text-muted">
+                            Al reutilizar prendas, evitamos que estos recursos sean consumidos en 
+                            la producción de prendas nuevas. Los datos son aproximados y pueden variar 
+                            según materiales y procesos específicos.
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+    // Datos desde Django
+    const categorias = {{ categorias_impacto|safe }};
+    
+    // Preparar datos para el gráfico
+    const labels = categorias.map(item => item.categoria);
+    const dataC02 = categorias.map(item => item.carbono);
+    const dataEnergia = categorias.map(item => item.energia);
+    const dataAgua = categorias.map(item => item.agua / 1000); // Convertir a miles de litros
+    
+    // Crear gráfico
+    const ctx = document.getElementById('impactChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'CO₂ Evitado (kg)',
+                    data: dataC02,
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Energía Ahorrada (kWh)',
+                    data: dataEnergia,
+                    backgroundColor: 'rgba(255, 193, 7, 0.8)',
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Agua Ahorrada (miles de L)',
+                    data: dataAgua,
+                    backgroundColor: 'rgba(23, 162, 184, 0.8)',
+                    borderColor: 'rgba(23, 162, 184, 1)',
+                    borderWidth: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Comparación de Impacto Ambiental por Categoría',
+                    font: {
+                        size: 16
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += context.parsed.y.toFixed(1);
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(1);
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

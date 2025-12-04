@@ -1,0 +1,47 @@
+.comparison-card {
+    border-radius: 15px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s;
+    height: 100%;
+    background: white;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.comparison-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(102, 126, 234, 0.3);
+}
+
+.category-icon {
+    font-size: 4rem;
+    color: #667eea;
+    margin-bottom: 1rem;
+}
+
+.metric-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.metric-row:last-child {
+    border-bottom: none;
+}
+
+.metric-label {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.metric-value {
+    font-weight: bold;
+    color: #667eea;
+}
+
+.chart-container {
+    position: relative;
+    height: 400px;
+    margin: 2rem 0;
+}

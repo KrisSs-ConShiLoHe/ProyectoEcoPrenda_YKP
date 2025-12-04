@@ -16,6 +16,10 @@ import dj_database_url
 from dotenv import load_dotenv
 import pymysql
 pymysql.install_as_MySQLdb()
+# Configuración adicional de Cloudinary
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -32,7 +36,7 @@ SECRET_KEY = 'django-insecure-!vv=3%%p7%(h*-3o2to1sc@s1&u2v0^-e!-bl-87g+npg5)xyb
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['10.58.32.190','127.0.0.1','localhost','proyectoecoprenda-ykp.onrender.com']
+ALLOWED_HOSTS = ['192.168.1.87','127.0.0.1','localhost','proyectoecoprenda-ykp.onrender.com']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://proyectoecoprenda-ykp.onrender.com'
@@ -226,30 +230,18 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'oCui-XzSjheafkQKxb4s_QmQ0W8')
 }
 
+# Usar Cloudinary como almacenamiento por defecto
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 # Opcional: usar Cloudinary como storage por defecto
 # DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # ---------------------- CARBON INTERFACE (Impacto Ambiental) ----------------------
 CARBON_INTERFACE_API_KEY = os.environ.get('CARBON_INTERFACE_API_KEY', 'ZWybV8XIZA8Vwadp1jeWNw')
 
-# ==============================================================================
-# NOTAS IMPORTANTES:
-# ==============================================================================
-# 1. Crear archivo .env en la raíz del proyecto con estas variables:
-#    GEOAPIFY_API_KEY=tu_clave_real
-#    CLOUDINARY_CLOUD_NAME=tu_cloud_name
-#    CLOUDINARY_API_KEY=tu_api_key
-#    CLOUDINARY_API_SECRET=tu_api_secret
-#    CARBON_INTERFACE_API_KEY=tu_api_key
-#    AWS_ACCESS_KEY_ID=tu_access_key
-#    AWS_SECRET_ACCESS_KEY=tu_secret_key
-#    AWS_REGION=us-east-1
-#    SHIPIT_API_KEY=tu_api_key
-#
-# 2. Para obtener API key GRATUITA de Geoapify:
-#    - Ir a: https://www.geoapify.com/
-#    - Registrarse gratis (3000 requests/día)
-#    - Copiar tu API key
-#
-# 3. NUNCA subir el archivo .env a GitHub (ya debe estar en .gitignore)
-# ==============================================================================
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'daev2fgjt'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY', '176413229185279'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET', 'oCui-XzSjheafkQKxb4s_QmQ0W8'),
+    secure=True  # Usar HTTPS
+)

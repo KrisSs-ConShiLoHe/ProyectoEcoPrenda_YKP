@@ -23,6 +23,25 @@ from .decorators import (
 )
 from django.conf import settings
 
+from .cloudinary_utils import (
+    subir_imagen_prenda,
+    subir_imagen_usuario,
+    subir_logo_fundacion,
+    subir_imagen_campana,
+    validar_imagen,
+    eliminar_imagen_cloudinary,
+    extraer_public_id_de_url
+)
+
+from .carbon_utils import (
+    calcular_impacto_prenda,
+    calcular_impacto_transaccion,
+    obtener_impacto_total_usuario,
+    obtener_impacto_total_plataforma,
+    generar_informe_impacto,
+    formatear_equivalencia
+)
+
 # ------------------------------------------------------------------------------------------------------------------
 # Utilidades de usuario y autenticación
 
@@ -1632,7 +1651,7 @@ def estadisticas_donaciones(request):
     return render(request, 'estadisticas_donaciones.html', context)
 
 # ==============================================================================
-# VISTA DEL MAPA INTERACTIVO - Agregar a views.py
+# VISTA DEL MAPA INTERACTIVO
 # ==============================================================================
 
 def mapa_fundaciones(request):
@@ -1782,3 +1801,606 @@ def actualizar_ubicacion_fundacion(request, id_fundacion):
             messages.error(request, f'Error: {str(e)}')
     
     return redirect('detalle_fundacion', id_fundacion=id_fundacion)
+
+# ==============================================================================
+# VISTAS ACTUALIZADAS CON CLOUDINARY - Reemplazar en views.py
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# ACTUALIZAR: crear_prenda
+# ------------------------------------------------------------------------------
+@cliente_only
+def crear_prenda(request):
+    """Permite al cliente crear una nueva prenda con imagen en Cloudinary."""
+    usuario = get_usuario_actual(request)
+    
+    if request.method == 'POST':
+        imagen = request.FILES.get('imagen_prenda')
+        nombre = request.POST.get('nombre')
+        descripcion = request.POST.get('descripcion')
+        categoria = request.POST.get('categoria')
+        talla = request.POST.get('talla')
+        condicion = request.POST.get('estado')
+
+        if not all([nombre, descripcion, categoria, talla, condicion]):
+            messages.error(request, 'Todos los campos son obligatorios.')
+            return render(request, 'crear_prenda.html', {
+                'usuario': usuario,
+                'categorias': ['Camiseta', 'Pantalón', 'Vestido', 'Chaqueta', 'Zapatos', 'Accesorios'],
+                'tallas': ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+                'estados': ['Nuevo', 'Excelente', 'Bueno', 'Usado'],
+            })
+        
+        # Validar imagen si se proporciona
+        if imagen:
+            es_valida, mensaje_error = validar_imagen(imagen)
+            if not es_valida:
+                messages.error(request, mensaje_error)
+                return redirect('crear_prenda')
+        
+        # Crear prenda primero (sin imagen)
+        prenda = Prenda.objects.create(
+            id_usuario=usuario,
+            nombre=nombre,
+            descripcion=descripcion,
+            categoria=categoria,
+            talla=talla,
+            estado='DISPONIBLE',
+            fecha_publicacion=timezone.now()
+        )
+        
+        # Subir imagen a Cloudinary si existe
+        if imagen:
+            resultado = subir_imagen_prenda(imagen, prenda.id_prenda)
+            if resultado and resultado.get('secure_url'):
+                prenda.imagen_prenda = resultado['secure_url']
+                prenda.save()
+                messages.success(request, '¡Prenda publicada con imagen en Cloudinary!')
+            else:
+                messages.warning(request, 'Prenda publicada pero hubo un error al subir la imagen.')
+        else:
+            messages.success(request, '¡Prenda publicada exitosamente!')
+        
+        # Calcular impacto ambiental simulado
+        carbono_evitado = 5.5
+        energia_ahorrada = 2.7
+        ImpactoAmbiental.objects.create(
+            id_prenda=prenda,
+            carbono_evitar_kg=carbono_evitado,
+            energia_ahorrada_kwh=energia_ahorrada,
+            fecha_calculo=timezone.now()
+        )
+        
+        return redirect('detalle_prenda', id_prenda=prenda.id_prenda)
+
+    context = {
+        'usuario': usuario,
+        'categorias': ['Camiseta', 'Pantalón', 'Vestido', 'Chaqueta', 'Zapatos', 'Accesorios'],
+        'tallas': ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+        'estados': ['Nuevo', 'Excelente', 'Bueno', 'Usado'],
+    }
+    return render(request, 'crear_prenda.html', context)
+
+
+# ------------------------------------------------------------------------------
+# ACTUALIZAR: actualizar_imagen_prenda
+# ------------------------------------------------------------------------------
+@login_required_custom
+def actualizar_imagen_prenda(request, id_prenda):
+    """Actualiza la imagen de una prenda usando Cloudinary."""
+    usuario = get_usuario_actual(request)
+    prenda = get_object_or_404(Prenda, id_prenda=id_prenda, id_usuario=usuario)
+    
+    if request.method == 'POST' and 'imagen_prenda' in request.FILES:
+        imagen = request.FILES['imagen_prenda']
+        
+        # Validar imagen
+        es_valida, mensaje_error = validar_imagen(imagen)
+        if not es_valida:
+            messages.error(request, mensaje_error)
+            return redirect('editar_prenda', id_prenda=prenda.id_prenda)
+        
+        # Eliminar imagen anterior de Cloudinary si existe
+        if prenda.imagen_prenda:
+            public_id = extraer_public_id_de_url(str(prenda.imagen_prenda))
+            if public_id:
+                eliminar_imagen_cloudinary(public_id)
+        
+        # Subir nueva imagen
+        resultado = subir_imagen_prenda(imagen, prenda.id_prenda)
+        if resultado and resultado.get('secure_url'):
+            prenda.imagen_prenda = resultado['secure_url']
+            prenda.save()
+            messages.success(request, 'Imagen actualizada correctamente en Cloudinary.')
+        else:
+            messages.error(request, 'Error al subir la imagen a Cloudinary.')
+        
+        return redirect('detalle_prenda', id_prenda=prenda.id_prenda)
+    
+    messages.error(request, 'Sube una imagen válida.')
+    return redirect('editar_prenda', id_prenda=prenda.id_prenda)
+
+
+# ------------------------------------------------------------------------------
+# ACTUALIZAR: actualizar_foto_perfil
+# ------------------------------------------------------------------------------
+@login_required_custom
+def actualizar_foto_perfil(request):
+    """Permite al usuario actualizar su foto de perfil usando Cloudinary."""
+    usuario = get_usuario_actual(request)
+    
+    if request.method == 'POST' and 'imagen_usuario' in request.FILES:
+        imagen = request.FILES['imagen_usuario']
+        
+        # Validar imagen
+        es_valida, mensaje_error = validar_imagen(imagen)
+        if not es_valida:
+            messages.error(request, mensaje_error)
+            return redirect('perfil')
+        
+        # Eliminar imagen anterior de Cloudinary si existe
+        if usuario.imagen_usuario:
+            public_id = extraer_public_id_de_url(str(usuario.imagen_usuario))
+            if public_id:
+                eliminar_imagen_cloudinary(public_id)
+        
+        # Subir nueva imagen
+        resultado = subir_imagen_usuario(imagen, usuario.id_usuario)
+        if resultado and resultado.get('secure_url'):
+            usuario.imagen_usuario = resultado['secure_url']
+            usuario.save()
+            messages.success(request, 'Foto de perfil actualizada.')
+        else:
+            messages.error(request, 'Error al subir la imagen.')
+        
+        return redirect('perfil')
+    
+    messages.error(request, 'Sube una imagen válida.')
+    return redirect('perfil')
+
+
+# ------------------------------------------------------------------------------
+# ACTUALIZAR: actualizar_logo_fundacion
+# ------------------------------------------------------------------------------
+@representante_fundacion_required
+def actualizar_logo_fundacion(request, id_fundacion):
+    """Actualiza el logo de la fundación usando Cloudinary."""
+    usuario = get_usuario_actual(request)
+    fundacion = get_object_or_404(Fundacion, id_fundacion=id_fundacion)
+    
+    # Verificar permisos
+    if not (usuario.es_representante_fundacion() and usuario.fundacion_asignada == fundacion):
+        messages.error(request, 'No tienes permiso para modificar esta fundación.')
+        return redirect('panel_fundacion')
+    
+    if request.method == 'POST' and 'imagen_fundacion' in request.FILES:
+        imagen = request.FILES['imagen_fundacion']
+        
+        # Validar imagen
+        es_valida, mensaje_error = validar_imagen(imagen)
+        if not es_valida:
+            messages.error(request, mensaje_error)
+            return redirect('panel_fundacion')
+        
+        # Eliminar imagen anterior
+        if fundacion.imagen_fundacion:
+            public_id = extraer_public_id_de_url(str(fundacion.imagen_fundacion))
+            if public_id:
+                eliminar_imagen_cloudinary(public_id)
+        
+        # Subir nueva imagen
+        resultado = subir_logo_fundacion(imagen, fundacion.id_fundacion)
+        if resultado and resultado.get('secure_url'):
+            fundacion.imagen_fundacion = resultado['secure_url']
+            fundacion.save()
+            messages.success(request, 'Logo de fundación actualizado.')
+        else:
+            messages.error(request, 'Error al subir el logo.')
+        
+        return redirect('panel_fundacion')
+    
+    messages.error(request, 'Sube una imagen válida.')
+    return redirect('panel_fundacion')
+
+
+# ------------------------------------------------------------------------------
+# ACTUALIZAR: actualizar_imagen_campana
+# ------------------------------------------------------------------------------
+@representante_fundacion_required
+def actualizar_imagen_campana(request, id_campana):
+    """Actualiza la imagen de una campaña usando Cloudinary."""
+    usuario = get_usuario_actual(request)
+    campana = get_object_or_404(CampanaFundacion, id_campana=id_campana)
+
+    if not usuario or usuario.fundacion_asignada != campana.id_fundacion:
+        messages.error(request, 'No tienes permiso para modificar esta campaña.')
+        return redirect('mis_campanas')
+
+    if request.method == 'POST' and 'imagen_campana' in request.FILES:
+        imagen = request.FILES['imagen_campana']
+        
+        # Validar imagen
+        es_valida, mensaje_error = validar_imagen(imagen)
+        if not es_valida:
+            messages.error(request, mensaje_error)
+            return redirect('detalle_campana', id_campana=id_campana)
+        
+        # Eliminar imagen anterior
+        if campana.imagen_campana:
+            public_id = extraer_public_id_de_url(str(campana.imagen_campana))
+            if public_id:
+                eliminar_imagen_cloudinary(public_id)
+        
+        # Subir nueva imagen
+        resultado = subir_imagen_campana(imagen, campana.id_campana)
+        if resultado and resultado.get('secure_url'):
+            campana.imagen_campana = resultado['secure_url']
+            campana.save()
+            messages.success(request, 'Imagen de campaña actualizada.')
+        else:
+            messages.error(request, 'Error al subir la imagen.')
+
+        return redirect('detalle_campana', id_campana=campana.id_campana)
+
+    messages.error(request, 'Sube una imagen válida.')
+    return redirect('detalle_campana', id_campana=id_campana)
+
+
+# ------------------------------------------------------------------------------
+# NUEVA: galeria_imagenes (opcional - mostrar transformaciones)
+# ------------------------------------------------------------------------------
+@login_required_custom
+def galeria_imagenes(request):
+    """
+    Muestra una galería de imágenes con diferentes transformaciones de Cloudinary.
+    Útil para demostrar capacidades de optimización.
+    """
+    usuario = get_usuario_actual(request)
+    
+    # Obtener prendas del usuario con imágenes
+    prendas = Prenda.objects.filter(
+        id_usuario=usuario,
+        imagen_prenda__isnull=False
+    ).exclude(imagen_prenda='')
+    
+    # Para cada prenda, generar URLs transformadas
+    prendas_con_transformaciones = []
+    for prenda in prendas:
+        if prenda.imagen_prenda:
+            url_base = str(prenda.imagen_prenda)
+            # Extraer public_id
+            public_id = extraer_public_id_de_url(url_base)
+            
+            if public_id:
+                from .cloudinary_utils import obtener_miniaturas
+                miniaturas = obtener_miniaturas(public_id)
+                
+                prendas_con_transformaciones.append({
+                    'prenda': prenda,
+                    'url_original': url_base,
+                    'miniaturas': miniaturas
+                })
+    
+    context = {
+        'usuario': usuario,
+        'prendas': prendas_con_transformaciones,
+    }
+    
+    return render(request, 'galeria_imagenes.html', context)
+
+
+# ==============================================================================
+# VISTAS ACTUALIZADAS CON CARBON INTERFACE
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# ACTUALIZAR: crear_prenda - Con cálculo real de impacto
+# ------------------------------------------------------------------------------
+@cliente_only
+def crear_prenda(request):
+    """Permite al cliente crear una nueva prenda con cálculo real de impacto."""
+    usuario = get_usuario_actual(request)
+    
+    if request.method == 'POST':
+        imagen = request.FILES.get('imagen_prenda')
+        nombre = request.POST.get('nombre')
+        descripcion = request.POST.get('descripcion')
+        categoria = request.POST.get('categoria')
+        talla = request.POST.get('talla')
+        condicion = request.POST.get('estado')
+
+        if not all([nombre, descripcion, categoria, talla, condicion]):
+            messages.error(request, 'Todos los campos son obligatorios.')
+            return render(request, 'crear_prenda.html', {
+                'usuario': usuario,
+                'categorias': ['Camiseta', 'Pantalón', 'Vestido', 'Chaqueta', 'Zapatos', 'Accesorios'],
+                'tallas': ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+                'estados': ['Nuevo', 'Excelente', 'Bueno', 'Usado'],
+            })
+        
+        # Validar imagen si se proporciona
+        if imagen:
+            from .cloudinary_utils import validar_imagen
+            es_valida, mensaje_error = validar_imagen(imagen)
+            if not es_valida:
+                messages.error(request, mensaje_error)
+                return redirect('crear_prenda')
+        
+        # Crear prenda
+        prenda = Prenda.objects.create(
+            id_usuario=usuario,
+            nombre=nombre,
+            descripcion=descripcion,
+            categoria=categoria,
+            talla=talla,
+            estado='DISPONIBLE',
+            fecha_publicacion=timezone.now()
+        )
+        
+        # Subir imagen a Cloudinary si existe
+        if imagen:
+            from .cloudinary_utils import subir_imagen_prenda
+            resultado = subir_imagen_prenda(imagen, prenda.id_prenda)
+            if resultado and resultado.get('secure_url'):
+                prenda.imagen_prenda = resultado['secure_url']
+                prenda.save()
+        
+        # ✨ CALCULAR IMPACTO AMBIENTAL REAL ✨
+        impacto = calcular_impacto_prenda(
+            categoria=categoria,
+            peso_kg=None,  # Podrías pedir el peso en el form
+            usar_api=True  # Intenta usar API, sino usa valores predefinidos
+        )
+        
+        # Guardar impacto en la base de datos
+        ImpactoAmbiental.objects.create(
+            id_prenda=prenda,
+            carbono_evitar_kg=impacto['carbono_evitado_kg'],
+            energia_ahorrada_kwh=impacto['energia_ahorrada_kwh'],
+            fecha_calculo=timezone.now()
+        )
+        
+        messages.success(
+            request, 
+            f'¡Prenda publicada! Evitarás {impacto["carbono_evitado_kg"]} kg de CO₂ al reutilizarla.'
+        )
+        
+        return redirect('detalle_prenda', id_prenda=prenda.id_prenda)
+
+    context = {
+        'usuario': usuario,
+        'categorias': ['Camiseta', 'Pantalón', 'Vestido', 'Chaqueta', 'Zapatos', 'Accesorios'],
+        'tallas': ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+        'estados': ['Nuevo', 'Excelente', 'Bueno', 'Usado'],
+    }
+    return render(request, 'crear_prenda.html', context)
+
+
+# ------------------------------------------------------------------------------
+# ACTUALIZAR: detalle_prenda - Mostrar impacto con equivalencias
+# ------------------------------------------------------------------------------
+@cliente_only
+def detalle_prenda(request, id_prenda):
+    """Detalle de prenda con impacto ambiental y equivalencias."""
+    usuario = get_usuario_actual(request)
+    prenda = get_object_or_404(Prenda, id_prenda=id_prenda)
+    impacto_obj = ImpactoAmbiental.objects.filter(id_prenda=prenda).first()
+    
+    # Calcular equivalencias si hay impacto
+    equivalencias = None
+    if impacto_obj:
+        from .carbon_utils import calcular_equivalencias
+        equivalencias = calcular_equivalencias(
+            carbono_kg=float(impacto_obj.carbono_evitar_kg or 0),
+            energia_kwh=float(impacto_obj.energia_ahorrada_kwh or 0),
+            agua_litros=5000  # Estimado
+        )
+    
+    # Buscar transacción actual
+    transaccion_actual = Transaccion.objects.filter(
+        id_prenda=prenda,
+        estado__in=['PENDIENTE', 'RESERVADA', 'EN_PROCESO']
+    ).order_by('-fecha_transaccion').first()
+
+    context = {
+        'usuario': usuario,
+        'prenda': prenda,
+        'impacto': impacto_obj,
+        'equivalencias': equivalencias,
+        'transaccion_actual': transaccion_actual,
+    }
+    return render(request, 'detalle_prenda.html', context)
+
+
+# ------------------------------------------------------------------------------
+# ACTUALIZAR: panel_impacto - Dashboard con datos reales
+# ------------------------------------------------------------------------------
+@login_required_custom
+def panel_impacto(request):
+    """Panel de impacto ambiental de la comunidad con datos reales."""
+    usuario = get_usuario_actual(request)
+    
+    # Obtener impacto total de la plataforma
+    impacto_plataforma = obtener_impacto_total_plataforma()
+    
+    # Estadísticas de transacciones
+    total_transacciones = Transaccion.objects.filter(estado='COMPLETADA').count()
+    total_donaciones = Transaccion.objects.filter(
+        id_tipo__nombre_tipo='Donación',
+        estado='COMPLETADA'
+    ).count()
+    total_intercambios = Transaccion.objects.filter(
+        id_tipo__nombre_tipo='Intercambio',
+        estado='COMPLETADA'
+    ).count()
+    total_ventas = Transaccion.objects.filter(
+        id_tipo__nombre_tipo='Venta',
+        estado='COMPLETADA'
+    ).count()
+
+    # Top usuarios con más impacto
+    from django.db.models import Sum, Count
+    usuarios_activos = Usuario.objects.annotate(
+        total_carbono=Sum('prenda__impactoambiental__carbono_evitar_kg'),
+        num_transacciones=Count('transaccion_id_usuario_origen_set')
+    ).filter(
+        total_carbono__isnull=False
+    ).order_by('-total_carbono')[:5]
+
+    # Top fundaciones
+    fundaciones_top = Fundacion.objects.annotate(
+        num_donaciones=Count('transaccion', filter=Q(transaccion__estado='COMPLETADA'))
+    ).filter(
+        num_donaciones__gt=0
+    ).order_by('-num_donaciones')[:5]
+
+    context = {
+        'usuario': usuario,
+        'impacto_total': impacto_plataforma,
+        'total_transacciones': total_transacciones,
+        'total_donaciones': total_donaciones,
+        'total_intercambios': total_intercambios,
+        'total_ventas': total_ventas,
+        'usuarios_activos': usuarios_activos,
+        'fundaciones_top': fundaciones_top,
+        'equivalencias': impacto_plataforma.get('equivalencias', {}),
+    }
+    
+    return render(request, 'panel_impacto.html', context)
+
+
+# ------------------------------------------------------------------------------
+# ACTUALIZAR: mi_impacto - Impacto personal del usuario
+# ------------------------------------------------------------------------------
+@login_required_custom
+def mi_impacto(request):
+    """Impacto ambiental personal del usuario con equivalencias."""
+    usuario = get_usuario_actual(request)
+    
+    if not usuario:
+        messages.error(request, 'Debes iniciar sesión.')
+        return redirect('login')
+    
+    # Obtener impacto total del usuario
+    impacto_usuario = obtener_impacto_total_usuario(usuario)
+    
+    # Mis transacciones completadas
+    mis_transacciones = Transaccion.objects.filter(
+        Q(id_usuario_origen=usuario) | Q(id_usuario_destino=usuario),
+        estado='COMPLETADA'
+    ).select_related('id_prenda', 'id_tipo', 'id_usuario_origen', 'id_usuario_destino', 'id_fundacion')
+
+    # Desglose por tipo
+    donaciones = mis_transacciones.filter(id_tipo__nombre_tipo='Donación').count()
+    intercambios = mis_transacciones.filter(id_tipo__nombre_tipo='Intercambio').count()
+    ventas = mis_transacciones.filter(id_tipo__nombre_tipo='Venta').count()
+    
+    # Ranking del usuario
+    from django.db.models import Sum
+    ranking = Usuario.objects.annotate(
+        total_carbono=Sum('prenda__impactoambiental__carbono_evitar_kg')
+    ).filter(
+        total_carbono__gte=impacto_usuario['total_carbono_kg']
+    ).count()
+
+    context = {
+        'usuario': usuario,
+        'mi_impacto': impacto_usuario,
+        'total_transacciones': mis_transacciones.count(),
+        'donaciones': donaciones,
+        'intercambios': intercambios,
+        'ventas': ventas,
+        'transacciones_recientes': mis_transacciones.order_by('-fecha_transaccion')[:10],
+        'equivalencias': impacto_usuario.get('equivalencias', {}),
+        'ranking': ranking,
+    }
+    
+    return render(request, 'mi_impacto.html', context)
+
+
+# ------------------------------------------------------------------------------
+# NUEVA: informe_impacto - Genera informe descargable
+# ------------------------------------------------------------------------------
+@login_required_custom
+def informe_impacto(request):
+    """Genera un informe detallado de impacto ambiental."""
+    usuario = get_usuario_actual(request)
+    
+    # Determinar tipo de informe
+    tipo = request.GET.get('tipo', 'personal')
+    
+    if tipo == 'personal':
+        informe = generar_informe_impacto(usuario=usuario)
+    elif tipo == 'fundacion' and usuario.es_representante_fundacion():
+        informe = generar_informe_impacto(fundacion=usuario.fundacion_asignada)
+    else:
+        informe = generar_informe_impacto()  # Informe global
+    
+    context = {
+        'usuario': usuario,
+        'informe': informe,
+        'tipo': tipo,
+    }
+    
+    return render(request, 'informe_impacto.html', context)
+
+
+# ------------------------------------------------------------------------------
+# NUEVA: comparador_impacto - Compara impacto de diferentes acciones
+# ------------------------------------------------------------------------------
+@login_required_custom
+def comparador_impacto(request):
+    """Herramienta para comparar el impacto de diferentes prendas."""
+    usuario = get_usuario_actual(request)
+    
+    # Calcular impacto de cada categoría
+    categorias_impacto = []
+    categorias = ['Camiseta', 'Pantalón', 'Vestido', 'Chaqueta', 'Zapatos', 'Accesorios']
+    
+    for categoria in categorias:
+        impacto = calcular_impacto_prenda(categoria, usar_api=False)
+        categorias_impacto.append({
+            'categoria': categoria,
+            'carbono': impacto['carbono_evitado_kg'],
+            'energia': impacto['energia_ahorrada_kwh'],
+            'agua': impacto['agua_ahorrada_litros'],
+        })
+    
+    context = {
+        'usuario': usuario,
+        'categorias_impacto': categorias_impacto,
+    }
+    
+    return render(request, 'comparador_impacto.html', context)
+
+
+# ------------------------------------------------------------------------------
+# NUEVA: api_calcular_impacto - API endpoint para calcular impacto
+# ------------------------------------------------------------------------------
+@login_required_custom
+def api_calcular_impacto(request):
+    """
+    API endpoint para calcular impacto en tiempo real.
+    Útil para AJAX desde el formulario de crear prenda.
+    """
+    if request.method == 'GET':
+        categoria = request.GET.get('categoria')
+        peso = request.GET.get('peso')
+        
+        if not categoria:
+            return JsonResponse({'error': 'Categoría requerida'}, status=400)
+        
+        peso_kg = float(peso) if peso else None
+        
+        impacto = calcular_impacto_prenda(
+            categoria=categoria,
+            peso_kg=peso_kg,
+            usar_api=False  # Para respuesta rápida
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'impacto': impacto
+        })
+    
+    return JsonResponse({'error': 'Método no permitido'}, status=405)

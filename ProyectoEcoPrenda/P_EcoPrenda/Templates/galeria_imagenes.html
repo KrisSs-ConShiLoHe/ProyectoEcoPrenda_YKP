@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Galería de Imágenes - EcoPrenda{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/galeria_imagenes.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4">
+            <i class="bi bi-images"></i> Galería de Imágenes
+        </h1>
+        <p class="lead text-muted">
+            Tus prendas optimizadas con Cloudinary en diferentes tamaños
+        </p>
+    </div>
+    
+    {% if prendas %}
+        {% for item in prendas %}
+        <div class="card gallery-card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-tag"></i> {{ item.prenda.nombre }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Imagen Original</h6>
+                        <img 
+                            src="{{ item.url_original }}" 
+                            class="img-fluid rounded shadow-sm"
+                            alt="{{ item.prenda.nombre }}"
+                        >
+                        <p class="text-muted small mt-2">
+                            <i class="bi bi-link"></i> URL: {{ item.url_original|truncatechars:50 }}
+                        </p>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6>Transformaciones Disponibles</h6>
+                        <div class="transformation-grid">
+                            {% if item.miniaturas %}
+                                <div class="transformation-item">
+                                    <img src="{{ item.miniaturas.thumbnail }}" alt="Miniatura">
+                                    <div class="transformation-label">Thumbnail</div>
+                                    <small class="text-muted">150x150</small>
+                                </div>
+                                
+                                <div class="transformation-item">
+                                    <img src="{{ item.miniaturas.small }}" alt="Pequeña">
+                                    <div class="transformation-label">Small</div>
+                                    <small class="text-muted">300x300</small>
+                                </div>
+                                
+                                <div class="transformation-item">
+                                    <img src="{{ item.miniaturas.medium }}" alt="Mediana">
+                                    <div class="transformation-label">Medium</div>
+                                    <small class="text-muted">600x600</small>
+                                </div>
+                                
+                                <div class="transformation-item">
+                                    <img src="{{ item.miniaturas.large }}" alt="Grande">
+                                    <div class="transformation-label">Large</div>
+                                    <small class="text-muted">1200x1200</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Beneficios de Cloudinary:</strong>
+                            <ul class="mb-0 small">
+                                <li>Optimización automática de tamaño</li>
+                                <li>Conversión a formatos modernos (WebP)</li>
+                                <li>CDN global para carga rápida</li>
+                                <li>Transformaciones on-the-fly</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-image display-1 text-muted"></i>
+            <p class="lead text-muted mt-3">
+                No tienes prendas con imágenes todavía
+            </p>
+            <a href="{% url 'crear_prenda' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Publicar Primera Prenda
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
