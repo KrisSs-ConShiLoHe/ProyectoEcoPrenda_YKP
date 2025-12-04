@@ -1725,7 +1725,7 @@ def mapa_fundaciones(request):
         activa=True,
         lat__isnull=False,
         lng__isnull=False
-    ).values('id', 'nombre', 'direccion', 'lat', 'lng', 'telefono', 'correo_contacto')
+    ).values('id_fundacion', 'nombre', 'direccion', 'lat', 'lng', 'telefono', 'correo_contacto')
 
     # Obtener usuarios que aceptaron mostrar su ubicación
     usuarios_visibles = Usuario.objects.filter(

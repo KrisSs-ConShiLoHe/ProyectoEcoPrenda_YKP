@@ -8,7 +8,7 @@ from .models import (
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre', 'apellido', 'correo', 'comuna', 'rol', 'fecha_registro')  # Cambié 'id_usuario' a 'id'.
+    list_display = ('id_usuario', 'nombre', 'apellido', 'correo', 'comuna', 'rol', 'fecha_registro')
     search_fields = ('nombre', 'apellido', 'correo')
     list_filter = ('comuna', 'rol', 'fecha_registro')
     ordering = ('-fecha_registro',)
@@ -66,7 +66,7 @@ class TransaccionAdmin(admin.ModelAdmin):
 
 @admin.register(Fundacion)
 class FundacionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre', 'correo_contacto', 'telefono', 'direccion', 'activa')  # Cambié 'id_fundacion' a 'id'.
+    list_display = ('id_fundacion', 'nombre', 'correo_contacto', 'telefono', 'direccion', 'activa')
     search_fields = ('nombre', 'correo_contacto')
     list_filter = ('activa',)
 

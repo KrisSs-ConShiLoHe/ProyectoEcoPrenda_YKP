@@ -41,7 +41,7 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # Cambia a False en producción
 
-ALLOWED_HOSTS = ['192.168.1.87', '127.0.0.1', 'localhost', 'proyectoecoprenda-ykp.onrender.com']
+ALLOWED_HOSTS = ['10.58.32.143', '127.0.0.1', 'localhost', 'proyectoecoprenda-ykp.onrender.com']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://proyectoecoprenda-ykp.onrender.com'

@@ -6,7 +6,7 @@ import hashlib
 # ------------------- Usuario ----------------------
 
 class Usuario(models.Model):
-    # Eliminé id_usuario como PK redundante; Django maneja 'id' automáticamente.
+    id_usuario = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100, blank=True, null=True)
     correo = models.EmailField(unique=True, max_length=120)  # Cambié a EmailField para validación automática.
@@ -113,6 +113,7 @@ class Usuario(models.Model):
 # ------------------- Fundacion ----------------------
 
 class Fundacion(models.Model):
+    id_fundacion = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=150)
     correo_contacto = models.EmailField(max_length=120, blank=True, null=True)  # Cambié a EmailField.
     telefono = models.CharField(max_length=20, blank=True, null=True)
